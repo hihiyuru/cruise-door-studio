@@ -113,7 +113,7 @@ section.part { background: var(--surface); border: 1px solid var(--line); border
   <div class="decide">
     <h2>要決定什麼</h2>
     <ol id="decide"></ol>
-    <p class="settled"><b>已定案：</b>範例貼紙的圖片遺失時直接重畫、不提示；放不下的貼紙不印，列在警告裡給「縮小」或「切塊」；ibon 用 RGB，不轉 CMYK；開啟專案檔可以用復原回到原本的排版；失敗提示是紅色、不會自己消失；存檔問題用頂端橫幅；PDF 拆檔時列出按鈕逐一下載；兩個分頁互相覆蓋時暫停儲存並提醒；文案照 CLAUDE.md 的 6 條規則。</p>
+    <p class="settled"><b>已定案：</b>範例貼紙的圖片遺失時直接重畫、不提示；放不下的貼紙不印，列在警告裡給「縮小」或「切塊」；ibon 用 RGB，不轉 CMYK；開啟專案檔可以用復原回到原本的排版；失敗提示是紅色、不會自己消失；存檔問題用頂端橫幅；PDF 拆檔時列出按鈕逐一下載；兩個分頁互相覆蓋時暫停儲存並提醒；文案照 CLAUDE.md 的 6 條規則；去背有修改時點外面不會關；貼紙超出門外又比紙大時，兩則提醒都顯示。</p>
   </div>
 
   <div id="parts"></div>
@@ -154,8 +154,7 @@ const paper = (txt) => `<div class="scr" style="background:#e9e6e1"><div class="
 const D = (n, why) => ({ n, why })
 const decide = [
   D('B4', '門的下半部排滿了，新加入的圖要放哪？現在是疊在門中間附近，可能蓋到別的貼紙。'),
-  D('C6', '去背做到一半，點視窗外面或按 Esc 會直接關掉，剛剛的修改不見也沒提示。要不要先確認？'),
-        D('B3', 'iPhone 照片常是 HEIC，現在讀不到只會說「請換成 PNG、JPG 或 SVG」。要支援 HEIC 嗎？'),
+          D('B3', 'iPhone 照片常是 HEIC，現在讀不到只會說「請換成 PNG、JPG 或 SVG」。要支援 HEIC 嗎？'),
 ]
 
 const parts = [
@@ -188,7 +187,7 @@ const parts = [
     ] },
     { g: '按「去背」' },
     { fork: [
-      ['點背景或自動去背', ['C6', 'todo', editor(), '點視窗外面就關掉，修改不保留']],
+      ['點背景或自動去背', ['C6', 'ok', editor({ toast: '還沒套用。按「套用」保留，按「取消」放棄。' }), '有修改時點外面或按 Esc 不關，按「取消」才放棄']],
       ['點到透明的地方', ['C7', 'ok', editor({ toast: '這裡沒有背景了。' }), '']],
       ['把整張都去掉了', ['C8', 'err', editor({ empty: true, toast: '△ 整張都被去掉了，按「上一步」。 ✕' }), '套用被擋下，視窗不關']],
       ['背景很雜的照片', ['C9', 'ghost', editor(), '點色去背效果有限；說明裡建議先用 remove.bg']],

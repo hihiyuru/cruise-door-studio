@@ -6,7 +6,7 @@ import { assets } from '../stores/assets'
 import { useLayout } from '../composables/useLayout'
 import { PLACES, papersFor, paperName, paperShortName, CUSTOM_PAPER_ID } from '../domain/papers'
 import { dpiOf, widthToFit } from '../domain/geometry'
-import type { PrintPlace } from '../domain/types'
+import { usePrintSettings } from '../composables/usePrintSettings'
 import { buildPdfs } from '../export/pdf'
 import { doorPreviewPng } from '../export/doorPng'
 import { downloadBlob } from '../export/download'
@@ -16,7 +16,7 @@ import { Check, Download } from 'lucide-vue-next'
 const project = useProject()
 const ui = useUi()
 const { layout, usable } = useLayout()
-const pr = computed(() => project.p.print)
+const { pr, setPlace, setPaper, setCustom } = usePrintSettings()
 
 const papers = computed(() => papersFor(pr.value.place))
 const sheets = computed(() => layout.value.sheets)
@@ -29,17 +29,8 @@ const blurry = computed(() => project.p.stickers.filter(s => {
   return a && !a.isSvg && !s.sample && dpiOf(a.art.width, s.w) < 150
 }))
 
-function setPlace(place: PrintPlace) {
-  pr.value.place = place
-  if (!papersFor(place).some(p => p.id === pr.value.paperId)) pr.value.paperId = papersFor(place)[0].id
-  project.commit()
-}
 function setNum(key: 'margin' | 'gap', v: string, min: number, max: number) {
   pr.value[key] = Math.max(min, Math.min(max, Math.round(+v || 0)))
-  project.commit()
-}
-function setCustom(key: 'w' | 'h', v: string) {
-  pr.value.custom[key] = Math.max(50, Math.min(1500, Math.round(+v || 0)))
   project.commit()
 }
 function shrink(id: string, w: number) {
@@ -127,7 +118,7 @@ async function downloadDoor() {
 
       <label class="flex flex-col gap-1.5">
         <span class="section-title">紙張</span>
-        <select class="input" :value="pr.paperId" @change="pr.paperId = ($event.target as HTMLSelectElement).value; project.commit()">
+        <select class="input" :value="pr.paperId" @change="setPaper(($event.target as HTMLSelectElement).value)">
           <option v-for="p in papers" :key="p.id" :value="p.id">{{ p.label }}</option>
           <option v-if="pr.place === 'shop'" :value="CUSTOM_PAPER_ID">自訂尺寸…</option>
         </select>

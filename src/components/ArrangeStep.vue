@@ -34,7 +34,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="grid grid-cols-1 items-start gap-6 md:grid-cols-[minmax(0,1fr)_280px] lg:grid-cols-[240px_minmax(0,1fr)_280px]">
+  <div class="grid grid-cols-1 items-start gap-6 md:grid-cols-[minmax(0,1fr)_280px] lg:grid-cols-[240px_auto_300px] lg:justify-center lg:gap-x-10">
     <LayerList class="order-2 md:col-start-2 md:row-start-1 lg:order-none lg:col-start-1 lg:border-r lg:border-line lg:pr-5" />
     <DoorStage class="order-1 md:col-start-1 md:row-span-2 md:row-start-1 lg:order-none lg:col-start-2" />
     <div class="order-3 md:col-start-2 md:row-start-2 lg:order-none lg:col-start-3 lg:row-start-1 lg:border-l lg:border-line lg:pl-5">

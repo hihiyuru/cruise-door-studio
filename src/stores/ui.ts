@@ -12,6 +12,10 @@ export interface Toast {
 export const useUi = defineStore('ui', () => {
   const step = ref<'arrange' | 'print'>('arrange')
   const selected = ref<string | null>(null)
+  /** Sticker under the pointer in the list, highlighted on the door. */
+  const hovered = ref<string | null>(null)
+  /** The top-bar print setting picker is open. */
+  const specOpen = ref(false)
   const editing = ref<string | null>(null)
   const toast = ref<Toast | null>(null)
   let timer: ReturnType<typeof setTimeout> | undefined
@@ -26,5 +30,5 @@ export const useUi = defineStore('ui', () => {
   const fail = (text: string) => notify(text, { tone: 'error' })
   const dismiss = () => { clearTimeout(timer); toast.value = null }
 
-  return { step, selected, editing, toast, notify, fail, dismiss }
+  return { step, selected, hovered, specOpen, editing, toast, notify, fail, dismiss }
 })

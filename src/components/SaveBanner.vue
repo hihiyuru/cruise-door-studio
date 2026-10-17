@@ -18,7 +18,7 @@ const reload = () => location.reload()
     <TriangleAlert :size="16" class="shrink-0" aria-hidden="true" />
     <template v-if="project.saveStatus === 'error'">
       <span class="mr-auto">無法自動儲存，關掉前先備份。</span>
-      <button type="button" class="btn" @click="backup">備份專案檔</button>
+      <button type="button" class="btn" @click="backup">下載備份</button>
     </template>
     <template v-else>
       <span class="mr-auto">另一個分頁改過排版，這裡的修改暫停儲存。</span>

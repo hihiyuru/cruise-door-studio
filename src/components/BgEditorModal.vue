@@ -13,6 +13,8 @@ const autoBtn = ref<HTMLButtonElement>()
 const tol = ref(28)
 const global = ref(false)
 const undoStack: ImageData[] = []
+/** Edited since opening; leaving by accident would throw the work away. */
+const dirty = ref(false)
 const busy = ref(false)
 
 const sticker = computed(() => project.byId(ui.editing))
@@ -26,6 +28,7 @@ function load(src: HTMLCanvasElement) {
 
 watch(() => ui.editing, async id => {
   undoStack.length = 0
+  dirty.value = false
   if (!id) return
   await nextTick()
   const a = sticker.value && assets.get(sticker.value.assetId)
@@ -38,6 +41,7 @@ function push() {
   const c = el.value!
   undoStack.push(ctx2d(c, true).getImageData(0, 0, c.width, c.height))
   if (undoStack.length > 12) undoStack.shift()
+  dirty.value = true
 }
 
 function onClick(e: MouseEvent) {
@@ -69,6 +73,11 @@ function reset() {
   load(a.art)
 }
 function close() { ui.editing = null }
+/** Clicking the backdrop or pressing Esc only closes when nothing would be lost. */
+function leave() {
+  if (dirty.value) ui.notify('還沒套用。按「套用」保留，按「取消」放棄。')
+  else close()
+}
 
 async function apply() {
   const s = sticker.value
@@ -91,11 +100,11 @@ async function apply() {
   }
 }
 
-function onKey(e: KeyboardEvent) { if (e.key === 'Escape') close() }
+function onKey(e: KeyboardEvent) { if (e.key === 'Escape') leave() }
 </script>
 
 <template>
-  <div v-if="ui.editing" class="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(10,16,26,.55)] p-4" @pointerdown.self="close" @keydown="onKey">
+  <div v-if="ui.editing" class="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(10,16,26,.55)] p-4" @pointerdown.self="leave" @keydown="onKey">
     <div class="grid max-h-full w-full max-w-[980px] gap-4 overflow-auto rounded-xl bg-surface p-4 md:grid-cols-[minmax(0,1fr)_260px]" role="dialog" aria-modal="true" aria-labelledby="ed-title">
       <div class="checker flex min-h-60 items-center justify-center rounded-lg p-2">
         <canvas ref="el" class="block max-h-[70vh] max-w-full cursor-crosshair" aria-label="點一下要去掉的背景顏色" @click="onClick" />

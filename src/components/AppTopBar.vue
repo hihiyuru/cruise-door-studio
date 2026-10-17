@@ -5,6 +5,7 @@ import { useProject } from '../stores/project'
 import { useUi } from '../stores/ui'
 import { importProject, ProjectFileError } from '../storage/projectFile'
 import { useBackup } from '../composables/useBackup'
+import PrintSpecPicker from './PrintSpecPicker.vue'
 import { useLayout } from '../composables/useLayout'
 
 const project = useProject()
@@ -50,7 +51,7 @@ async function onOpen(e: Event) {
     await project.replaceAll(p, list)
     ui.selected = null
     ui.step = 'arrange'
-    ui.notify('已開啟專案。', { action: { label: '復原', run: () => project.undo() } })
+    ui.notify('已開啟備份。', { action: { label: '復原', run: () => project.undo() } })
   } catch (err) {
     ui.fail(err instanceof ProjectFileError ? err.message : '無法開啟，檔案可能已損毀。')
   }
@@ -80,19 +81,20 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
 
     <div ref="menu" class="relative">
       <button type="button" class="btn" :aria-expanded="menuOpen" aria-haspopup="menu" @click="menuOpen = !menuOpen">
-        專案<ChevronDown :size="15" aria-hidden="true" />
+        備份<ChevronDown :size="15" aria-hidden="true" />
       </button>
       <div v-if="menuOpen" role="menu" class="absolute right-0 z-30 mt-1 w-56 rounded-md border border-line bg-surface p-1 shadow-lg">
         <button type="button" role="menuitem" class="block w-full rounded px-3 py-2 text-left hover:bg-surface-2" @click="backup">
-          備份專案檔<span class="block text-[12px] text-muted">換電腦時用</span>
+          下載備份<span class="block text-[12px] text-muted">排版和圖片存成一個檔案，換電腦也能接著做</span>
         </button>
         <button type="button" role="menuitem" class="block w-full rounded px-3 py-2 text-left hover:bg-surface-2" @click="openFile">
-          開啟專案檔<span class="block text-[12px] text-muted">會取代目前的排版，可以復原</span>
+          開啟備份<span class="block text-[12px] text-muted">會取代目前的排版，可以復原</span>
         </button>
       </div>
       <input ref="fileInput" type="file" accept=".json,application/json" class="hidden" @change="onOpen" />
     </div>
 
+    <PrintSpecPicker v-if="ui.step === 'arrange'" />
     <button v-if="ui.step === 'arrange'" type="button" class="btn btn-primary" @click="ui.step = 'print'; ui.selected = null">
       <Printer :size="16" aria-hidden="true" />列印／下載 PDF<span v-if="sheetCount" class="num opacity-85">（{{ sheetCount }} 張）</span>
     </button>
