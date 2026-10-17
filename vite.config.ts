@@ -32,5 +32,6 @@ const contentSecurityPolicy = (): Plugin => ({
 export default defineConfig({
   base: '/cruise-door-studio/',
   plugins: [vue(), tailwindcss(), contentSecurityPolicy()],
-  test: { environment: 'node' },
+  // unit tests live next to the code; e2e/ belongs to Playwright
+  test: { environment: 'node', include: ['src/**/*.test.ts'] },
 })

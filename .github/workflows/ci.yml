@@ -31,9 +31,28 @@ jobs:
         with:
           path: dist
 
+  # scenario tests from docs/scenario-map.html, against the production build with its CSP
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run e2e
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces
+          path: test-results/
+          retention-days: 7
+
   deploy:
     if: github.event_name == 'push'
-    needs: check
+    needs: [check, e2e]
     runs-on: ubuntu-latest
     permissions:
       pages: write

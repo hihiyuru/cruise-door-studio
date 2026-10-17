@@ -106,14 +106,17 @@ function onKey(e: KeyboardEvent) {
 
 <style scoped>
 @reference "../style.css";
-/* 20px handle with an icon, 48px touch target */
+/* 20px handle with an icon; on touch screens a 48px target. With a mouse the target stays the handle's own
+   size, otherwise on a small sticker it covers the middle and dragging resizes instead of moving. */
 .handle {
   @apply absolute z-10 grid h-5 w-5 touch-none place-items-center rounded-full border-2 border-select bg-surface text-select;
 }
 .handle > svg { pointer-events: none; }
-.handle::before {
-  content: "";
-  position: absolute;
-  inset: -14px;
+@media (pointer: coarse) {
+  .handle::before {
+    content: "";
+    position: absolute;
+    inset: -14px;
+  }
 }
 </style>
