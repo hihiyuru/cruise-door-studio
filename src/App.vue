@@ -1,0 +1,52 @@
+<script setup lang="ts">
+import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { useProject } from './stores/project'
+import { useUi } from './stores/ui'
+import AppTopBar from './components/AppTopBar.vue'
+import SaveBanner from './components/SaveBanner.vue'
+import ArrangeStep from './components/ArrangeStep.vue'
+import PrintStep from './components/PrintStep.vue'
+import BgEditorModal from './components/BgEditorModal.vue'
+import AppToast from './components/AppToast.vue'
+
+const project = useProject()
+const ui = useUi()
+const ready = ref(false)
+
+const typing = () => /^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement?.tagName ?? '')
+
+function onKey(e: KeyboardEvent) {
+  if (ui.editing || typing()) return
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z') {
+    e.preventDefault()
+    const ok = e.shiftKey ? project.redo() : project.undo()
+    if (!ok) ui.notify(e.shiftKey ? '沒有可以重做的步驟了。' : '沒有可以復原的步驟了。')
+    else if (ui.selected && !project.byId(ui.selected)) ui.selected = null
+  }
+}
+
+onMounted(async () => {
+  const { lost } = await project.load()
+  if (lost) ui.fail(`找不到 ${lost} 張圖，已從門上移除。`)
+  ready.value = true
+  window.addEventListener('keydown', onKey)
+})
+onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
+</script>
+
+<template>
+  <div class="min-h-dvh px-4 pb-10 pt-3">
+    <AppTopBar />
+    <SaveBanner />
+    <main class="mx-auto mt-5 max-w-[1500px]">
+      <p v-if="!ready" class="py-20 text-center text-muted">正在讀取上次的排版…</p>
+      <ArrangeStep v-else-if="ui.step === 'arrange'" />
+      <PrintStep v-else />
+    </main>
+    <footer class="mx-auto mt-10 max-w-[1500px] border-t border-line pt-3 text-[12px] text-muted">
+      非迪士尼官方工具・圖片只存在這台電腦的瀏覽器，不會上傳・艙門是金屬門，裝飾要用磁鐵固定
+    </footer>
+    <BgEditorModal />
+    <AppToast />
+  </div>
+</template>

@@ -1,0 +1,29 @@
+<script setup lang="ts">
+import { TriangleAlert } from 'lucide-vue-next'
+import { useProject } from '../stores/project'
+import { useBackup } from '../composables/useBackup'
+
+/** Saving problems can cost the whole layout, so they stay on screen instead of in a toast. */
+const project = useProject()
+const backup = useBackup()
+const reload = () => location.reload()
+</script>
+
+<template>
+  <div
+    v-if="project.saveStatus === 'error' || project.saveStatus === 'conflict'"
+    class="mx-auto mt-3 flex max-w-[1500px] flex-wrap items-center gap-x-3 gap-y-2 rounded-md border border-warn bg-warn-bg px-3 py-2 text-[13.5px] text-warn"
+    role="alert"
+  >
+    <TriangleAlert :size="16" class="shrink-0" aria-hidden="true" />
+    <template v-if="project.saveStatus === 'error'">
+      <span class="mr-auto">無法自動儲存，關掉前先備份。</span>
+      <button type="button" class="btn" @click="backup">備份專案檔</button>
+    </template>
+    <template v-else>
+      <span class="mr-auto">另一個分頁改過排版，這裡的修改暫停儲存。</span>
+      <button type="button" class="btn" @click="reload">載入最新</button>
+      <button type="button" class="btn" @click="project.keepThisTab()">保留這裡的版本</button>
+    </template>
+  </div>
+</template>
