@@ -31,7 +31,7 @@ function clearSamples() {
   project.p.stickers = project.p.stickers.filter(s => !s.sample)
   ui.selected = null
   project.commit()
-  ui.notify('已清掉範例', { label: '復原', run: () => project.undo() })
+  ui.notify('已清掉範例。', { action: { label: '復原', run: () => project.undo() } })
 }
 
 let armed: ReturnType<typeof setTimeout> | undefined
@@ -48,7 +48,7 @@ function clearAll() {
   project.p.stickers = []
   ui.selected = null
   project.commit()
-  ui.notify(`已清空 ${n} 張貼紙`, { label: '復原', run: () => project.undo() })
+  ui.notify(`已清空 ${n} 張。`, { action: { label: '復原', run: () => project.undo() } })
 }
 </script>
 

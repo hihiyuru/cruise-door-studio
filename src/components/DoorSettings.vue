@@ -51,6 +51,6 @@ function setDoor(id: string) {
       <p class="mt-1.5">{{ door.w / 10 }} × {{ door.h / 10 }} cm。{{ door.note }}</p>
     </details>
 
-    <p class="border-t border-line pt-3 text-[12.5px] text-muted">點門上或左邊清單的貼紙，就能調整大小、去背和白邊。</p>
+    <p class="border-t border-line pt-3 text-[12.5px] text-muted">點貼紙就能調整大小、去背和白邊。</p>
   </section>
 </template>

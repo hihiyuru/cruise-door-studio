@@ -14,8 +14,8 @@ export interface Paper {
  * (A3 28.9 × 40.5 cm, A4 20.2 × 28.3 cm) and come out 1:1.
  */
 const IBON: Paper[] = [
-  { id: 'ibon-a3', label: 'A3（ibon 可印範圍 28.9 × 40.5 cm）', w: 289, h: 405, price: 20 },
-  { id: 'ibon-a4', label: 'A4（ibon 可印範圍 20.2 × 28.3 cm）', w: 202, h: 283, price: 10 },
+  { id: 'ibon-a3', label: 'A3', w: 289, h: 405, price: 20 },
+  { id: 'ibon-a4', label: 'A4', w: 202, h: 283, price: 10 },
 ]
 
 const SHOP: Paper[] = [
@@ -38,8 +38,8 @@ const HOME: Paper[] = [
 export const CUSTOM_PAPER_ID = 'custom'
 
 export const PLACES: { id: PrintPlace; short: string; hint: string }[] = [
-  { id: 'ibon', short: '7-11 ibon', hint: '一般紙，A3 彩色一張約 20 元。頁面已做成 ibon 能印的範圍，印出來是實際大小。' },
-  { id: 'shop', short: '印刷店', hint: '可以選相紙、大尺寸。' },
+  { id: 'ibon', short: '7-11 ibon', hint: '一般紙，A3 彩色一張約 20 元。' },
+  { id: 'shop', short: '印刷店', hint: '可以選相紙和大尺寸。' },
   { id: 'home', short: '家用印表機', hint: '以 A4 為主。' },
 ]
 
@@ -53,6 +53,12 @@ export function paperFor(place: PrintPlace, id: string, custom: { w: number; h: 
   }
   const list = papersFor(place)
   return list.find(p => p.id === id) ?? list[0]
+}
+
+/** Name shown to people: A3, A4, A3 加大, or the custom size. */
+export function paperName(p: Paper): string {
+  if (p.id === CUSTOM_PAPER_ID) return `${p.w} × ${p.h} mm`
+  return p.label.replace(/（.*$/, '')
 }
 
 /** Short name used in file names. */

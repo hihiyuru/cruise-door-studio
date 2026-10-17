@@ -38,10 +38,10 @@ export async function importProject(f: Blob): Promise<{ project: ProjectState; a
   try {
     file = JSON.parse(await f.text())
   } catch {
-    throw new ProjectFileError('這不是專案檔，請選擇從這裡匯出的 .json 檔。')
+    throw new ProjectFileError('無法開啟，這不是專案檔。')
   }
   if (file?.format !== FORMAT || !file.project || !Array.isArray(file.assets)) {
-    throw new ProjectFileError('這不是郵輪艙門裝飾工作台的專案檔。')
+    throw new ProjectFileError('無法開啟，這不是專案檔。')
   }
   const assets = await Promise.all(file.assets.map(async a => ({
     id: a.id,

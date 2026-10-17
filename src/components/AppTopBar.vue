@@ -3,14 +3,14 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { ArrowLeft, ChevronDown, Printer, Redo2, Undo2 } from 'lucide-vue-next'
 import { useProject } from '../stores/project'
 import { useUi } from '../stores/ui'
-import { assets } from '../stores/assets'
-import { exportProject, importProject, ProjectFileError } from '../storage/projectFile'
-import { downloadBlob, stamp } from '../export/download'
+import { importProject, ProjectFileError } from '../storage/projectFile'
+import { useBackup } from '../composables/useBackup'
 import { useLayout } from '../composables/useLayout'
 
 const project = useProject()
 const ui = useUi()
 const { layout } = useLayout()
+const doBackup = useBackup()
 const fileInput = ref<HTMLInputElement>()
 const menuOpen = ref(false)
 const menu = ref<HTMLElement>()
@@ -19,7 +19,8 @@ const status = computed(() => {
   switch (project.saveStatus) {
     case 'loading': return ''
     case 'saving': return '儲存中…'
-    case 'error': return '沒辦法存在這個瀏覽器，請備份專案檔'
+    case 'error': return '無法自動儲存'
+    case 'conflict': return '暫停儲存'
     default: {
       const t = project.savedAt
       return t ? `已自動儲存 ${t.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false })}` : '已自動儲存'
@@ -31,10 +32,7 @@ const sheetCount = computed(() => layout.value.sheets.length)
 
 async function backup() {
   menuOpen.value = false
-  const used = new Set(project.p.stickers.flatMap(s => [s.assetId, s.origAssetId]))
-  const blob = await exportProject(JSON.parse(JSON.stringify(project.p)), [...assets.values()].filter(a => used.has(a.id)))
-  downloadBlob(blob, `艙門裝飾專案-${stamp()}.json`)
-  ui.notify('已下載專案檔。換電腦時用「開啟專案檔」接著做')
+  await doBackup()
 }
 
 function openFile() {
@@ -52,9 +50,9 @@ async function onOpen(e: Event) {
     await project.replaceAll(p, list)
     ui.selected = null
     ui.step = 'arrange'
-    ui.notify(`已開啟專案，共 ${p.stickers.length} 張貼紙`)
+    ui.notify('已開啟專案。', { action: { label: '復原', run: () => project.undo() } })
   } catch (err) {
-    ui.notify(err instanceof ProjectFileError ? err.message : '讀不到這個專案檔，檔案可能損壞了')
+    ui.fail(err instanceof ProjectFileError ? err.message : '無法開啟，檔案可能已損毀。')
   }
 }
 
@@ -73,7 +71,7 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
     </button>
     <h1 class="mr-auto text-[17px] font-bold">郵輪艙門裝飾工作台</h1>
 
-    <span class="text-[12.5px]" :class="project.saveStatus === 'error' ? 'text-warn' : 'text-muted'" aria-live="polite">{{ status }}</span>
+    <span class="text-[12.5px]" :class="project.saveStatus === 'error' || project.saveStatus === 'conflict' ? 'text-warn' : 'text-muted'" aria-live="polite">{{ status }}</span>
 
     <div class="flex items-center">
       <button type="button" class="btn btn-quiet !px-2" :disabled="!project.canUndo" title="復原（⌘Z）" aria-label="復原" @click="undo"><Undo2 :size="17" /></button>
@@ -86,10 +84,10 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
       </button>
       <div v-if="menuOpen" role="menu" class="absolute right-0 z-30 mt-1 w-56 rounded-md border border-line bg-surface p-1 shadow-lg">
         <button type="button" role="menuitem" class="block w-full rounded px-3 py-2 text-left hover:bg-surface-2" @click="backup">
-          備份專案檔<span class="block text-[12px] text-muted">下載 .json，換電腦時用</span>
+          備份專案檔<span class="block text-[12px] text-muted">換電腦時用</span>
         </button>
         <button type="button" role="menuitem" class="block w-full rounded px-3 py-2 text-left hover:bg-surface-2" @click="openFile">
-          開啟專案檔<span class="block text-[12px] text-muted">取代目前的排版，可以按復原回來</span>
+          開啟專案檔<span class="block text-[12px] text-muted">會取代目前的排版，可以復原</span>
         </button>
       </div>
       <input ref="fileInput" type="file" accept=".json,application/json" class="hidden" @change="onOpen" />

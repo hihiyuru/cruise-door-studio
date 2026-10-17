@@ -101,7 +101,7 @@ function onKey(e: KeyboardEvent, s: Sticker) {
     e.preventDefault()
     const removed = project.remove(s.id)
     ui.selected = null
-    if (removed) ui.notify(`已刪除「${removed.name}」`, { label: '復原', run: () => project.undo() })
+    if (removed) ui.notify(`已刪除「${removed.name}」。`, { action: { label: '復原', run: () => project.undo() } })
   } else if (e.key === 'Escape') {
     ui.selected = null
   }

@@ -4,7 +4,7 @@ import type { ProjectState, Sticker } from '../domain/types'
 import { ADVENTURE, doorFor } from '../domain/doors'
 import { paperFor } from '../domain/papers'
 import { bbox, hits, outer } from '../domain/geometry'
-import { loadProject, saveProject, type StoredAsset } from '../storage/idb'
+import { currentRev, loadProject, saveProject, SaveConflict, type StoredAsset } from '../storage/idb'
 import { assets, addAsset, addCanvasAsset, restoreAssets } from './assets'
 import { sampleArt } from '../render/samples'
 
@@ -24,7 +24,7 @@ export function defaultProject(): ProjectState {
   }
 }
 
-export type SaveStatus = 'loading' | 'saved' | 'saving' | 'error'
+export type SaveStatus = 'loading' | 'saved' | 'saving' | 'error' | 'conflict'
 
 export const useProject = defineStore('project', () => {
   const p = reactive<ProjectState>(defaultProject())
@@ -83,18 +83,36 @@ export const useProject = defineStore('project', () => {
     }
     return keep
   }
+  /* Several tabs share one save. Each save bumps a counter; a tab that sees the counter move under it
+     stops saving instead of silently overwriting the other tab's work. */
+  const tab = uid()
+  let rev = 0
+  const channel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('cruise-door-studio') : null
+  channel?.addEventListener('message', (e: MessageEvent<{ rev: number; tab: string }>) => {
+    if (e.data.tab !== tab && e.data.rev > rev) saveStatus.value = 'conflict'
+  })
+
   function scheduleSave() {
     clearTimeout(saveTimer)
+    if (saveStatus.value === 'conflict') return
     saveStatus.value = 'saving'
     saveTimer = setTimeout(async () => {
       try {
-        await saveProject(toRaw(p), assets as Map<string, StoredAsset>, referencedAssets())
+        rev = await saveProject(toRaw(p), assets as Map<string, StoredAsset>, referencedAssets(), rev, tab)
+        channel?.postMessage({ rev, tab })
         saveStatus.value = 'saved'
         savedAt.value = new Date()
-      } catch {
-        saveStatus.value = 'error'
+      } catch (e) {
+        saveStatus.value = e instanceof SaveConflict ? 'conflict' : 'error'
       }
     }, 600)
+  }
+
+  /** Keep this tab's layout after a conflict: overwrite whatever the other tab saved. */
+  async function keepThisTab() {
+    rev = await currentRev()
+    saveStatus.value = 'saved'
+    scheduleSave()
   }
 
   /** Read the last layout back. Returns how many stickers had to be dropped because their picture was missing. */
@@ -102,6 +120,7 @@ export const useProject = defineStore('project', () => {
     try {
       const stored = await loadProject()
       if (stored) {
+        rev = stored.rev
         await restoreAssets(stored.assets)
         const project = { ...defaultProject(), ...stored.project }
         const missing = project.stickers.filter(s => !assets.has(s.assetId))
@@ -227,7 +246,7 @@ export const useProject = defineStore('project', () => {
   }
 
   return {
-    p, door, paper, byId, saveStatus, savedAt,
+    p, door, paper, byId, saveStatus, savedAt, keepThisTab,
     commit, undo, redo, canUndo, canRedo,
     load, restoreSamples, replaceAll, addFiles, replaceArt, remove, duplicate, reorder,
   }

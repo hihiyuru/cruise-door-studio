@@ -6,7 +6,7 @@ import { useUi } from '../stores/ui'
 import { assets, assetsVersion, isSvgFile } from '../stores/assets'
 import { dpiOf, hits, outer, widthToFit } from '../domain/geometry'
 import { useLayout } from '../composables/useLayout'
-import { paperShortName } from '../domain/papers'
+import { paperName } from '../domain/papers'
 
 const project = useProject()
 const ui = useUi()
@@ -17,34 +17,28 @@ const s = computed(() => project.byId(ui.selected))
 const size = computed(() => (s.value ? outer(s.value) : null))
 const cm = (mm: number) => (mm / 10).toFixed(1).replace(/\.0$/, '')
 
-const dpi = computed(() => {
+const ZONE_NAMES: Record<string, string> = { 門牌: '門牌', 貓眼: '貓眼', 門鎖和門把: '門把' }
+const paperLabel = computed(() => paperName(project.paper))
+
+/** The one thing worth saying about this sticker, most important first: in the way > blurry > won't fit. */
+const status = computed(() => {
   void assetsVersion.value
-  if (!s.value) return null
-  const a = assets.get(s.value.assetId)
-  if (!a) return null
-  if (a.isSvg) return { text: '向量圖，印多大都清楚', bad: false }
-  const d = dpiOf(a.art.width, s.value.w)
-  return { text: `${d} dpi，${d >= 250 ? '清楚' : d >= 150 ? '近看會有點軟' : '印出來會糊，請縮小或換大一點的圖'}`, bad: d < 150 }
-})
-
-const problems = computed(() => (s.value ? hits(s.value, project.door.keepOut, project.door) : []))
-const problemText = computed(() => {
-  const zones = problems.value.filter(p => p !== '門外')
-  const parts = []
-  if (zones.length) parts.push(`蓋到${zones.join('、')}`)
-  if (problems.value.includes('門外')) parts.push('超出門外')
-  return parts.join('，')
-})
-
-const paperName = computed(() => paperShortName(project.p.print.place, project.paper))
-/** How this sticker will print on the current paper. */
-const printStatus = computed(() => {
-  if (!s.value) return null
-  const fitW = widthToFit(s.value, usable.value.w, usable.value.h)
-  const split = layout.value.split.find(p => p.sticker.id === s.value!.id)
-  if (fitW === null) return { ok: true, text: `${paperName.value} 一張印得下`, fitW: null }
-  if (split) return { ok: false, text: `${paperName.value} 放不下，會切成 ${split.tile!.n} 塊自己拼`, fitW }
-  return { ok: false, text: `${paperName.value} 放不下`, fitW }
+  const st = s.value
+  if (!st) return null
+  const hit = hits(st, project.door.keepOut, project.door)
+  const zone = hit.find(h => h !== '門外')
+  if (zone) return { tone: 'warn' as const, text: `擋到${ZONE_NAMES[zone] ?? zone}了，挪開一點。` }
+  if (hit.length) return { tone: 'warn' as const, text: '超出門外了。' }
+  const a = assets.get(st.assetId)
+  if (a && !a.isSvg && dpiOf(a.art.width, st.w) < 150) return { tone: 'warn' as const, text: '圖太小，印出來會糊。' }
+  const fitW = widthToFit(st, usable.value.w, usable.value.h)
+  if (fitW === null) return { tone: 'ok' as const, text: `${paperLabel.value} 一張印得完。` }
+  const split = layout.value.split.find(p => p.sticker.id === st.id)
+  return {
+    tone: 'warn' as const,
+    text: split ? `${paperLabel.value} 印不下，會分成 ${split.tile!.n} 張印。` : `${paperLabel.value} 印不下。`,
+    fitW,
+  }
 })
 
 function setWidthCm(v: string) {
@@ -54,8 +48,9 @@ function setWidthCm(v: string) {
   project.commit()
 }
 function shrinkToFit() {
-  if (!s.value || !printStatus.value?.fitW) return
-  s.value.w = printStatus.value.fitW
+  const fitW = status.value && 'fitW' in status.value ? status.value.fitW : null
+  if (!s.value || !fitW) return
+  s.value.w = fitW
   s.value.tile = false
   project.commit()
 }
@@ -64,7 +59,7 @@ function remove() {
   if (!s.value) return
   const removed = project.remove(s.value.id)
   ui.selected = null
-  if (removed) ui.notify(`已刪除「${removed.name}」`, { label: '復原', run: () => project.undo() })
+  if (removed) ui.notify(`已刪除「${removed.name}」。`, { action: { label: '復原', run: () => project.undo() } })
 }
 function dup(mirror: boolean) {
   if (!s.value) return
@@ -78,9 +73,9 @@ async function onReplace(e: Event) {
   if (!f || !s.value) return
   try {
     await project.replaceArt(s.value.id, f, isSvgFile(f))
-    ui.notify('已換圖，位置和大小不變', { label: '復原', run: () => project.undo() })
+    ui.notify('已換圖。', { action: { label: '復原', run: () => project.undo() } })
   } catch {
-    ui.notify(`讀不到「${f.name}」，請換成 PNG、JPG 或 SVG`)
+    ui.fail(`無法開啟 ${f.name}，改用 JPG 或 PNG。`)
   }
 }
 </script>
@@ -119,16 +114,15 @@ async function onReplace(e: Event) {
     <label class="flex items-center gap-2 text-[13px]">
       <input v-model="s.cut" type="checkbox" @change="project.commit()" />外圍加灰色裁切線</label>
 
-    <div class="flex flex-col gap-1.5 border-t border-line pt-3 text-[12.5px]">
-      <p v-if="problems.length" class="flex items-center gap-1.5 text-warn"><TriangleAlert :size="14" aria-hidden="true" />{{ problemText }}</p>
-      <p v-if="dpi" class="flex items-center gap-1.5" :class="dpi.bad ? 'text-warn' : 'text-muted'">
-        <TriangleAlert v-if="dpi.bad" :size="14" aria-hidden="true" /><span>{{ dpi.text }}</span></p>
-      <p v-if="printStatus" class="flex items-center gap-1.5" :class="printStatus.ok ? 'text-muted' : 'text-warn'">
-        <Check v-if="printStatus.ok" :size="14" class="text-ok" aria-hidden="true" /><TriangleAlert v-else :size="14" aria-hidden="true" />{{ printStatus.text }}</p>
-      <template v-if="printStatus && !printStatus.ok">
-        <button v-if="printStatus.fitW" type="button" class="btn mt-1" @click="shrinkToFit">縮到 {{ cm(printStatus.fitW) }} cm，一張印完</button>
-        <label class="flex items-center gap-2 text-[13px]">
-          <input v-model="s.tile" type="checkbox" @change="project.commit()" />維持大小，切成幾塊自己拼</label>
+    <div v-if="status" class="flex flex-col gap-2 border-t border-line pt-3 text-[13px]">
+      <p class="flex items-center gap-1.5" :class="status.tone === 'ok' ? 'text-muted' : 'text-warn'">
+        <Check v-if="status.tone === 'ok'" :size="15" class="shrink-0 text-ok" aria-hidden="true" />
+        <TriangleAlert v-else :size="15" class="shrink-0" aria-hidden="true" />{{ status.text }}
+      </p>
+      <template v-if="'fitW' in status && status.fitW">
+        <button type="button" class="btn" @click="shrinkToFit">縮到 {{ cm(status.fitW) }} cm</button>
+        <label class="flex items-center gap-2">
+          <input v-model="s.tile" type="checkbox" @change="project.commit()" />分成幾張印，自己拼</label>
       </template>
     </div>
 
