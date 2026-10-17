@@ -4,7 +4,7 @@ import type { Placement } from '../domain/packing'
 import { outer } from '../domain/geometry'
 import { displayCanvas } from '../render/display'
 import { cropTo, rot90 } from '../render/canvas'
-import { assetsVersion } from '../stores/assets'
+import { assets, assetsVersion } from '../stores/assets'
 
 const props = defineProps<{ sheet: Placement[]; paper: { w: number; h: number }; margin: number; index: number; label: string }>()
 const el = ref<HTMLCanvasElement>()
@@ -23,7 +23,7 @@ function draw() {
   x.strokeRect(props.margin * K, props.margin * K, (props.paper.w - 2 * props.margin) * K, (props.paper.h - 2 * props.margin) * K)
   x.setLineDash([])
   for (const p of props.sheet) {
-    let src = displayCanvas(p.sticker)
+    let src = displayCanvas(p.sticker, assets.get(p.sticker.assetId)?.art)
     if (!src) continue
     if (p.crop) src = cropTo(src, p.crop, outer(p.sticker))
     if (p.rot) src = rot90(src)
@@ -46,7 +46,14 @@ watch(() => [props.sheet, props.paper, props.margin, assetsVersion.value], draw,
 
 <template>
   <figure class="m-0 flex flex-col gap-1">
-    <canvas ref="el" class="h-auto w-full rounded-sm bg-white shadow-[0_1px_3px_rgba(0,0,0,.12)]" :aria-label="label" role="img" />
-    <figcaption class="text-[12px] text-muted">{{ label }}</figcaption>
+    <canvas
+      ref="el"
+      class="h-auto w-full rounded-sm bg-white shadow-[0_1px_3px_rgba(0,0,0,.12)]"
+      :aria-label="label"
+      role="img"
+    />
+    <figcaption class="text-[12px] text-muted">
+      {{ label }}
+    </figcaption>
   </figure>
 </template>

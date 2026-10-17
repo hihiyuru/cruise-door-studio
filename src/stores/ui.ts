@@ -7,6 +7,8 @@ export interface Toast {
   action?: { label: string; run: () => void }
   /** Errors stay until dismissed, so a failure is never missed. */
   tone: 'info' | 'error'
+  /** For undo offers: the project step this toast belongs to; the action hides once another step lands. */
+  step?: number
 }
 
 export const useUi = defineStore('ui', () => {
@@ -21,10 +23,10 @@ export const useUi = defineStore('ui', () => {
   let timer: ReturnType<typeof setTimeout> | undefined
   let seq = 0
 
-  function notify(text: string, opts: { action?: Toast['action']; tone?: Toast['tone'] } = {}) {
+  function notify(text: string, opts: { action?: Toast['action']; tone?: Toast['tone']; step?: number } = {}) {
     clearTimeout(timer)
     const tone = opts.tone ?? 'info'
-    toast.value = { id: ++seq, text, action: opts.action, tone }
+    toast.value = { id: ++seq, text, action: opts.action, tone, step: opts.step }
     if (tone === 'info') timer = setTimeout(() => (toast.value = null), opts.action ? 6000 : 3000)
   }
   const fail = (text: string) => notify(text, { tone: 'error' })

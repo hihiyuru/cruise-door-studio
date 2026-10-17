@@ -6,7 +6,7 @@ import AppTopBar from './components/AppTopBar.vue'
 import SaveBanner from './components/SaveBanner.vue'
 import ArrangeStep from './components/ArrangeStep.vue'
 import PrintStep from './components/PrintStep.vue'
-import BgEditorModal from './components/BgEditorModal.vue'
+import BackgroundEditorModal from './components/BackgroundEditorModal.vue'
 import AppToast from './components/AppToast.vue'
 
 const project = useProject()
@@ -39,14 +39,19 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
     <AppTopBar />
     <SaveBanner />
     <main class="mx-auto mt-5 max-w-[1500px]">
-      <p v-if="!ready" class="py-20 text-center text-muted">正在讀取上次的排版…</p>
+      <p
+        v-if="!ready"
+        class="py-20 text-center text-muted"
+      >
+        正在讀取上次的排版…
+      </p>
       <ArrangeStep v-else-if="ui.step === 'arrange'" />
       <PrintStep v-else />
     </main>
     <footer class="mx-auto mt-10 max-w-[1500px] border-t border-line pt-3 text-[12px] text-muted">
       非迪士尼官方工具・圖片只存在這台電腦的瀏覽器，不會上傳・艙門是金屬門，裝飾要用磁鐵固定
     </footer>
-    <BgEditorModal />
+    <BackgroundEditorModal />
     <AppToast />
   </div>
 </template>

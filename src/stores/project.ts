@@ -3,14 +3,22 @@ import { computed, reactive, ref, toRaw } from 'vue'
 import type { ProjectState, Sticker } from '../domain/types'
 import { ADVENTURE, doorFor } from '../domain/doors'
 import { paperFor } from '../domain/papers'
-import { bbox, hits, outer } from '../domain/geometry'
+import { layoutSheets } from '../domain/packing'
+import { freeSpot } from '../domain/placement'
+import { fileBaseName, newId } from '../domain/format'
+import { sanitizeProject } from '../domain/projectSchema'
 import { currentRev, loadProject, saveProject, SaveConflict, type StoredAsset } from '../storage/idb'
 import { assets, addAsset, addCanvasAsset, restoreAssets } from './assets'
 import { sampleArt } from '../render/samples'
 
 const HISTORY_LIMIT = 50
+/** New pictures start this wide; when many arrive at once, a little smaller so more fit on the door. */
+const DEFAULT_WIDTH_MM = 100
+const BULK_WIDTH_MM = 80
+const BULK_UPLOAD = 12
+/** Wait this long after the last change before writing, so a drag saves once. */
+const SAVE_DEBOUNCE_MS = 600
 
-export const uid = () => Math.random().toString(36).slice(2, 10)
 
 export function defaultProject(): ProjectState {
   return {
@@ -28,23 +36,29 @@ export function defaultProject(): ProjectState {
 export type SaveStatus = 'loading' | 'saved' | 'saving' | 'error' | 'conflict'
 
 export const useProject = defineStore('project', () => {
-  const p = reactive<ProjectState>(defaultProject())
+  const state = reactive<ProjectState>(defaultProject())
   const saveStatus = ref<SaveStatus>('loading')
   const savedAt = ref<Date | null>(null)
 
-  const door = computed(() => doorFor(p.doorId, p.customDoor))
-  const paper = computed(() => paperFor(p.print.place, p.print.paperId, p.print.custom))
-  const byId = (id: string | null) => (id ? p.stickers.find(s => s.id === id) : undefined)
+  const door = computed(() => doorFor(state.doorId, state.customDoor))
+  const paper = computed(() => paperFor(state.print.place, state.print.paperId, state.print.custom))
+  const byId = (id: string | null) => (id ? state.stickers.find(s => s.id === id) : undefined)
+  /** How the stickers land on the chosen paper; shared by the top bar, the settings panel and the print step. */
+  const layout = computed(() => layoutSheets(state.stickers, paper.value, state.print.margin, state.print.gap))
+  const usable = computed(() => ({ w: paper.value.w - 2 * state.print.margin, h: paper.value.h - 2 * state.print.margin }))
 
   /* ---------- undo / redo (snapshots of the plain project state) ---------- */
-  const snap = () => JSON.stringify(toRaw(p))
+  const snap = () => JSON.stringify(toRaw(state))
   let last = snap()
   const past = ref<string[]>([])
   const future = ref<string[]>([])
+  /** Changes on every commit, undo and redo; an offer to undo one particular step checks it is still the latest. */
+  const head = ref(0)
 
   function apply(json: string) {
-    Object.assign(p, JSON.parse(json))
+    Object.assign(state, JSON.parse(json))
     last = json
+    head.value++
     scheduleSave()
   }
 
@@ -56,6 +70,7 @@ export const useProject = defineStore('project', () => {
     if (past.value.length > HISTORY_LIMIT) past.value.shift()
     future.value = []
     last = now
+    head.value++
     scheduleSave()
   }
   function undo() {
@@ -86,32 +101,44 @@ export const useProject = defineStore('project', () => {
   }
   /* Several tabs share one save. Each save bumps a counter; a tab that sees the counter move under it
      stops saving instead of silently overwriting the other tab's work. */
-  const tab = uid()
+  const tab = newId()
   let rev = 0
   const channel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('cruise-door-studio') : null
   channel?.addEventListener('message', (e: MessageEvent<{ rev: number; tab: string }>) => {
     if (e.data.tab !== tab && e.data.rev > rev) saveStatus.value = 'conflict'
   })
 
+  /* Saves run one after another: a save that starts while the previous one is still writing would carry
+     the old counter and look like another tab's edit. */
+  let queue: Promise<void> = Promise.resolve()
+
+  async function writeNow() {
+    if (saveStatus.value === 'conflict') return
+    try {
+      rev = await saveProject(toRaw(state), assets as Map<string, StoredAsset>, referencedAssets(), rev, tab)
+      channel?.postMessage({ rev, tab })
+      saveStatus.value = 'saved'
+      savedAt.value = new Date()
+    } catch (e) {
+      saveStatus.value = e instanceof SaveConflict ? 'conflict' : 'error'
+    }
+  }
+
   function scheduleSave() {
     clearTimeout(saveTimer)
     if (saveStatus.value === 'conflict') return
     saveStatus.value = 'saving'
-    saveTimer = setTimeout(async () => {
-      try {
-        rev = await saveProject(toRaw(p), assets as Map<string, StoredAsset>, referencedAssets(), rev, tab)
-        channel?.postMessage({ rev, tab })
-        saveStatus.value = 'saved'
-        savedAt.value = new Date()
-      } catch (e) {
-        saveStatus.value = e instanceof SaveConflict ? 'conflict' : 'error'
-      }
-    }, 600)
+    saveTimer = setTimeout(() => { queue = queue.then(writeNow) }, SAVE_DEBOUNCE_MS)
   }
 
   /** Keep this tab's layout after a conflict: overwrite whatever the other tab saved. */
   async function keepThisTab() {
-    rev = await currentRev()
+    try {
+      rev = await currentRev()
+    } catch {
+      saveStatus.value = 'error'
+      return
+    }
     saveStatus.value = 'saved'
     scheduleSave()
   }
@@ -123,14 +150,14 @@ export const useProject = defineStore('project', () => {
       if (stored) {
         rev = stored.rev
         await restoreAssets(stored.assets)
-        const project = { ...defaultProject(), ...stored.project }
+        const project = sanitizeProject(stored.project, defaultProject())
         const missing = project.stickers.filter(s => !assets.has(s.assetId))
         project.stickers = project.stickers.filter(s => assets.has(s.assetId))
         // missing examples are simply redrawn; only the user's own pictures count as lost
         const lost = missing.filter(s => !s.sample).length
-        Object.assign(p, project)
+        Object.assign(state, project)
         // nothing usable left: start again from the examples instead of an empty door
-        if (missing.length && !p.stickers.length) await addSamples()
+        if (missing.length && !state.stickers.length) await addSamples()
         last = snap()
         saveStatus.value = 'saved'
         if (missing.length) scheduleSave()
@@ -151,40 +178,26 @@ export const useProject = defineStore('project', () => {
     commit()
   }
 
-  /** Open a project file. The previous layout stays one undo step away. */
-  async function replaceAll(project: ProjectState, list: StoredAsset[]) {
+  /** Open a backup. The previous layout stays one undo step away. Returns how many pictures could not be read. */
+  async function replaceAll(project: unknown, list: StoredAsset[]): Promise<{ lost: number }> {
     await restoreAssets(list)
-    Object.assign(p, { ...defaultProject(), ...project })
+    const next = sanitizeProject(project, defaultProject())
+    const before = next.stickers.length
+    next.stickers = next.stickers.filter(s => assets.has(s.assetId))
+    Object.assign(state, next)
     commit()
+    return { lost: before - next.stickers.length }
   }
 
   /* ---------- stickers ---------- */
   async function addSamples() {
     for (const s of sampleArt()) {
       const a = await addCanvasAsset(s.art)
-      p.stickers.push({
-        id: uid(), name: s.name, assetId: a.id, origAssetId: a.id, ar: a.art.height / a.art.width,
+      state.stickers.push({
+        id: newId(), name: s.name, assetId: a.id, origAssetId: a.id, ar: a.art.height / a.art.width,
         w: s.w, x: s.x, y: s.y, rot: s.rot, border: 3, cut: false, tile: false, sample: true,
       })
     }
-  }
-
-  /** First free spot (scanning the lower half of the door) where `s` overlaps no other sticker and no keep-out zone. */
-  function freeSpot(s: Sticker, others: Sticker[]): { x: number; y: number } | null {
-    const d = door.value
-    const o = outer(s)
-    const GAP = 8
-    const boxes = others.map(bbox)
-    for (let y = d.h * 0.5 + o.h / 2; y <= d.h - o.h / 2 - 10; y += 10) {
-      for (let x = o.w / 2 + 15; x <= d.w - o.w / 2 - 15; x += 10) {
-        const c = { ...s, x, y }
-        if (hits(c, d.keepOut, d).length) continue
-        const b = bbox(c)
-        if (boxes.some(r => b.x < r.x + r.w + GAP && b.x + b.w + GAP > r.x && b.y < r.y + r.h + GAP && b.y + b.h + GAP > r.y)) continue
-        return { x, y }
-      }
-    }
-    return null
   }
 
   /** Add uploaded files, each placed in a free spot on the lower half of the door. */
@@ -192,21 +205,23 @@ export const useProject = defineStore('project', () => {
     const added: Sticker[] = []
     const failed: string[] = []
     const d = door.value
-    const w = files.length > 12 ? 80 : 100
+    const w = files.length > BULK_UPLOAD ? BULK_WIDTH_MM : DEFAULT_WIDTH_MM
     for (const f of files) {
       try {
         const a = await addAsset(f, isSvg(f))
         const s: Sticker = {
-          id: uid(), name: f.name.replace(/\.[^.]+$/, '') || '貼上的圖片', assetId: a.id, origAssetId: a.id,
+          id: newId(), name: fileBaseName(f.name) || '貼上的圖片', assetId: a.id, origAssetId: a.id,
           ar: a.art.height / a.art.width, w, x: d.w / 2, y: d.h * 0.75, rot: 0, border: 2, cut: false, tile: false,
         }
-        Object.assign(s, freeSpot(s, [...p.stickers, ...added]) ?? { x: d.w / 2 + (added.length % 5) * 15, y: d.h * 0.75 + (added.length % 5) * 15 })
+        // no free spot left: fan them out a little around the middle of the lower half so each can still be grabbed
+        const fan = (added.length % 5) * 15
+        Object.assign(s, freeSpot(s, [...state.stickers, ...added], d) ?? { x: d.w / 2 + fan, y: d.h * 0.75 + fan })
         added.push(s)
       } catch {
         failed.push(f.name)
       }
     }
-    p.stickers.push(...added)
+    state.stickers.push(...added)
     commit()
     return { added, failed }
   }
@@ -216,14 +231,14 @@ export const useProject = defineStore('project', () => {
     const s = byId(id)
     if (!s) return
     const a = await addAsset(f, isSvg)
-    Object.assign(s, { assetId: a.id, origAssetId: a.id, ar: a.art.height / a.art.width, name: f.name.replace(/\.[^.]+$/, '') || s.name, sample: false })
+    Object.assign(s, { assetId: a.id, origAssetId: a.id, ar: a.art.height / a.art.width, name: fileBaseName(f.name) || s.name, sample: false })
     commit()
   }
 
   function remove(id: string) {
-    const i = p.stickers.findIndex(s => s.id === id)
+    const i = state.stickers.findIndex(s => s.id === id)
     if (i < 0) return null
-    const [s] = p.stickers.splice(i, 1)
+    const [s] = state.stickers.splice(i, 1)
     commit()
     return s
   }
@@ -231,24 +246,33 @@ export const useProject = defineStore('project', () => {
   function duplicate(id: string, mirror: boolean) {
     const s = byId(id)
     if (!s) return null
-    const n: Sticker = { ...s, id: uid() }
+    const n: Sticker = { ...s, id: newId() }
     if (mirror) { n.x = door.value.w - s.x; n.rot = -s.rot } else { n.x += 20; n.y += 20 }
-    p.stickers.push(n)
+    state.stickers.push(n)
     commit()
     return n
   }
 
+  /** Nudge a sticker (keyboard arrows); one undo step per press. */
+  function moveBy(id: string, dx: number, dy: number) {
+    const s = byId(id)
+    if (!s) return
+    s.x += dx
+    s.y += dy
+    commit()
+  }
+
   function reorder(id: string, to: number) {
-    const i = p.stickers.findIndex(s => s.id === id)
+    const i = state.stickers.findIndex(s => s.id === id)
     if (i < 0) return
-    const [s] = p.stickers.splice(i, 1)
-    p.stickers.splice(Math.max(0, Math.min(p.stickers.length, to)), 0, s)
+    const [s] = state.stickers.splice(i, 1)
+    state.stickers.splice(Math.max(0, Math.min(state.stickers.length, to)), 0, s)
     commit()
   }
 
   return {
-    p, door, paper, byId, saveStatus, savedAt, keepThisTab,
-    commit, undo, redo, canUndo, canRedo,
-    load, restoreSamples, replaceAll, addFiles, replaceArt, remove, duplicate, reorder,
+    state, door, paper, byId, saveStatus, savedAt, keepThisTab,
+    layout, usable, head, commit, undo, redo, canUndo, canRedo,
+    load, restoreSamples, replaceAll, addFiles, replaceArt, remove, duplicate, moveBy, reorder,
   }
 })

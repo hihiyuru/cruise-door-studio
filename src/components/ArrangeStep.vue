@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted } from 'vue'
 import { useUi } from '../stores/ui'
-import { useAddFiles } from '../composables/useFiles'
+import { useAddFiles } from '../composables/useAddFiles'
 import LayerList from './LayerList.vue'
 import DoorStage from './DoorStage.vue'
 import InspectorPanel from './InspectorPanel.vue'

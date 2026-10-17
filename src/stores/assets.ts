@@ -1,11 +1,14 @@
 import { shallowRef } from 'vue'
+import { newId } from '../domain/format'
 import { loadImage, toCanvas, trim, canvasToBlob, type Canvas } from '../render/canvas'
 import type { StoredAsset } from '../storage/idb'
+import type { Artwork, ArtworkLookup } from '../render/artwork'
 
 /** An uploaded picture plus its working raster (transparent margins trimmed). */
-export interface Asset extends StoredAsset {
-  art: Canvas
-}
+export interface Asset extends StoredAsset, Artwork {}
+
+/** Hand pictures to the render and export layers without them importing this store. */
+export const lookupArtwork: ArtworkLookup = id => assets.get(id)
 
 const RASTER_MAX = 4000
 const SVG_MAX = 3000
@@ -17,7 +20,6 @@ export const assets = (g.__cdsAssets ??= new Map<string, Asset>())
 /** Bumped whenever an asset is added, so views can re-render. */
 export const assetsVersion = shallowRef(0)
 
-const uid = () => Math.random().toString(36).slice(2, 10)
 
 export const isSvgFile = (f: { type: string; name?: string }) => f.type === 'image/svg+xml' || /\.svg$/i.test(f.name ?? '')
 
@@ -32,7 +34,7 @@ async function decode(blob: Blob, isSvg: boolean): Promise<Canvas> {
   }
 }
 
-export async function addAsset(blob: Blob, isSvg: boolean, id = uid()): Promise<Asset> {
+export async function addAsset(blob: Blob, isSvg: boolean, id = newId()): Promise<Asset> {
   const art = await decode(blob, isSvg)
   const a: Asset = { id, blob, isSvg, art }
   assets.set(id, a)
@@ -43,7 +45,7 @@ export async function addAsset(blob: Blob, isSvg: boolean, id = uid()): Promise<
 /** Store an edited canvas (after background removal) as a new raster asset. */
 export async function addCanvasAsset(c: Canvas): Promise<Asset> {
   const blob = await canvasToBlob(c)
-  const a: Asset = { id: uid(), blob, isSvg: false, art: c }
+  const a: Asset = { id: newId(), blob, isSvg: false, art: c }
   assets.set(a.id, a)
   assetsVersion.value++
   return a
@@ -51,18 +53,4 @@ export async function addCanvasAsset(c: Canvas): Promise<Asset> {
 
 export async function restoreAssets(list: StoredAsset[]) {
   await Promise.all(list.map(a => addAsset(a.blob, a.isSvg, a.id).catch(() => null)))
-}
-
-/** Re-render a vector asset so its trimmed width is `targetPx`, for printing. */
-export async function svgAtWidth(a: Asset, targetPx: number): Promise<Canvas> {
-  const url = URL.createObjectURL(a.blob)
-  try {
-    const im = await loadImage(url)
-    const probe = toCanvas(im, 2000, true)
-    const t = trim(probe) ?? probe
-    const hi = toCanvas(im, Math.min(16000, (2000 * targetPx) / t.width), true)
-    return trim(hi) ?? hi
-  } finally {
-    URL.revokeObjectURL(url)
-  }
 }
