@@ -27,8 +27,11 @@
 | `npm run build` | `vue-tsc -b` 型別檢查 + `vite build` |
 | `npm run typecheck` | 只跑型別檢查 |
 | `npm run lint` | ESLint（Vue Style Guide＋分層規則），`lint:fix` 自動修排版 |
+| `npm run e2e` | Playwright 情境測試（`e2e/`），先 build 再用 preview 測正式版；本機用已安裝的 Chrome |
 
-CI（`.github/workflows/ci.yml`）在 PR 會跑 `npm run lint`、`npm test` 和 `npm run build`。推之前本機先跑這三個。
+CI（`.github/workflows/ci.yml`）在 PR 會跑 `npm run lint`、`npm test`、`npm run build` 和 `npm run e2e`。推之前本機先跑過。
+
+**情境測試**：`e2e/` 的每個測試都對應 `docs/scenario-map.html` 的一個節點。新增或改動流程時，圖和測試一起改；測試用的圖片只放自己產生的（`e2e/fixtures/`），不放任何角色圖。
 
 ## 目錄
 

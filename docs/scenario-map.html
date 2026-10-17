@@ -100,7 +100,7 @@ section.part { background: var(--surface); border: 1px solid var(--line); border
 <div class="wrap">
   <header>
     <h1>郵輪艙門裝飾工作台：情境全圖</h1>
-    <p class="sub">節點就是使用者當下看到的畫面。框內的字是網站上真的會出現的文案，框外是給我們看的註記。依據 2026-10-17 的 PR #1 版本整理。</p>
+    <p class="sub">節點就是使用者當下看到的畫面。框內的字是網站上真的會出現的文案，框外是給我們看的註記。依據 2026-10-18 的 main（PR #5 之後）整理；A–F 每個節點都有 e2e/ 裡的對應測試。</p>
   </header>
 
   <div class="legend" aria-label="圖例">
@@ -216,11 +216,25 @@ const parts = [
     ] },
   ] },
   { t: 'E. 換電腦、備份、同時開很多頁', flow: [
-    ['E1', 'ok', arrange({ extra: '<div class="menu"><div class="hl">備份專案檔<br>換電腦時用</div><div>開啟專案檔<br>會取代目前的排版，可以復原</div></div>' }), '「專案」選單'],
+    ['E1', 'ok', arrange({ extra: '<div class="menu"><div class="hl">下載備份<br>排版和圖片存成一個檔案，換電腦也能接著做</div><div>開啟備份<br>會取代目前的排版，可以復原</div></div>' }), '「備份」選單'],
     { fork: [
-      ['開啟正確的專案檔', ['E2', 'ok', arrange({ toast: '已開啟專案。 <u>復原</u>' }), '原本的排版按復原就能回來']],
-      ['選錯檔案', ['E4', 'err', arrange({ toast: '△ 無法開啟，這不是專案檔。 ✕' }), '排版不受影響']],
+      ['開啟正確的專案檔', ['E2', 'ok', arrange({ toast: '已開啟備份。 <u>復原</u>' }), '原本的排版按復原就能回來']],
+      ['選錯檔案', ['E4', 'err', arrange({ toast: '△ 無法開啟，這不是備份檔。 ✕' }), '排版不受影響']],
       ['同時開兩個分頁在改', ['E3', 'ok', `<div class="scr"><div class="top"><b>兩個分頁</b></div><div class="twin"><div>分頁 1<br><span class="warn" style="display:block">△ 另一個分頁改過排版，這裡的修改暫停儲存。<br>［載入最新］［保留這裡的版本］</span></div><div>分頁 2<br>加入了南瓜<br>已自動儲存 20:32</div></div></div>`, '偵測到就暫停儲存，讓人選要留哪一邊']],
+    ] },
+  ] },
+  { t: 'F. 第一階段之後補上的情境（每個節點都有對應的 e2e 測試）', flow: [
+    { g: '選到一張貼紙' },
+    { fork: [
+      ['用貼紙旁的工具列', ['F1', 'ok', arrange({ stickers: [[8, 40], [28, 70, 'sel'], [15, 95]], extra: '<div class="toast" style="bottom:auto;top:48px;left:118px">去背 複製 刪除</div>' }), '靠近門頂時改到貼紙下方']],
+      ['拖一張很小的貼紙', ['F2', 'ok', arrange({ stickers: [[8, 40], [30, 90, 'sel'], [15, 95]] }), '從中間拖是移動，不會誤按到縮放把手']],
+      ['刪除後又改了別的', ['F3', 'ok', arrange({ toast: '已刪除「米奇」。' }), '提示上的［復原］消失，不會撤回錯的步驟']],
+    ] },
+    { g: '換紙張或開備份' },
+    { fork: [
+      ['在頂端列改列印規格', ['F4', 'ok', arrange({ extra: '<div class="menu" style="right:6px;width:90px"><div class="hl">7-11 ibon｜印刷店｜家用</div><div>紙張 A1 ▾</div></div>' }), '右欄、印刷頁同步改變']],
+      ['備份裡有解不開的圖', ['F5', 'err', arrange({ toast: '△ 已開啟備份，但找不到 1 張圖，已從門上移除。 ✕' }), '其他貼紙照常開啟']],
+      ['來路不明的備份檔', ['F6', 'ghost', arrange(), '藏在檔案裡的程式不會執行，也不會連到外部網址']],
     ] },
   ] },
 ]
