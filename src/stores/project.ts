@@ -17,7 +17,8 @@ export function defaultProject(): ProjectState {
     version: 1,
     doorId: ADVENTURE.id,
     customDoor: { w: 800, h: 2000 },
-    roomNo: '10812',
+    // deck 99 does not exist on the ship, so the preview never shows a real guest's cabin
+    roomNo: '99999',
     stickers: [],
     print: { place: 'ibon', paperId: 'ibon-a3', custom: { w: 210, h: 297 }, margin: 8, gap: 4 },
     view: { keepOut: true, grid: false },
