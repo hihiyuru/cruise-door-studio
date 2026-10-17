@@ -11,7 +11,9 @@ const RASTER_MAX = 4000
 const SVG_MAX = 3000
 
 /** Images live outside the undoable project state; stickers point at them by id. */
-export const assets = new Map<string, Asset>()
+// kept on globalThis so a hot reload during development does not forget the images the project still points at
+const g = globalThis as { __cdsAssets?: Map<string, Asset> }
+export const assets = (g.__cdsAssets ??= new Map<string, Asset>())
 /** Bumped whenever an asset is added, so views can re-render. */
 export const assetsVersion = shallowRef(0)
 

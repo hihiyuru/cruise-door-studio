@@ -70,7 +70,9 @@ function clearAll() {
       <button v-if="hasSamples" type="button" class="link" @click="clearSamples">清掉範例</button>
     </div>
 
-    <p v-if="!rows.length" class="text-[13px] text-muted">門上還沒有貼紙。</p>
+    <p v-if="!rows.length" class="text-[13px] text-muted">
+      門上還沒有貼紙。<button type="button" class="link" @click="project.restoreSamples()">放回範例貼紙</button>
+    </p>
     <ul v-else class="-mx-1 flex max-h-[58vh] flex-col overflow-y-auto">
       <li v-for="s in rows" :key="s.id">
         <button

@@ -97,18 +97,24 @@ export const useProject = defineStore('project', () => {
     }, 600)
   }
 
-  async function load() {
+  /** Read the last layout back. Returns how many stickers had to be dropped because their picture was missing. */
+  async function load(): Promise<{ lost: number }> {
     try {
       const stored = await loadProject()
       if (stored) {
         await restoreAssets(stored.assets)
         const project = { ...defaultProject(), ...stored.project }
-        // drop stickers whose picture could not be read back
+        const missing = project.stickers.filter(s => !assets.has(s.assetId))
         project.stickers = project.stickers.filter(s => assets.has(s.assetId))
+        // missing examples are simply redrawn; only the user's own pictures count as lost
+        const lost = missing.filter(s => !s.sample).length
         Object.assign(p, project)
+        // nothing usable left: start again from the examples instead of an empty door
+        if (missing.length && !p.stickers.length) await addSamples()
         last = snap()
         saveStatus.value = 'saved'
-        return
+        if (missing.length) scheduleSave()
+        return { lost }
       }
     } catch {
       saveStatus.value = 'error'
@@ -116,6 +122,13 @@ export const useProject = defineStore('project', () => {
     await addSamples()
     last = snap()
     scheduleSave()
+    return { lost: 0 }
+  }
+
+  /** Put the example stickers back (offered on an empty door). */
+  async function restoreSamples() {
+    await addSamples()
+    commit()
   }
 
   /** Open a project file. The previous layout stays one undo step away. */
@@ -216,6 +229,6 @@ export const useProject = defineStore('project', () => {
   return {
     p, door, paper, byId, saveStatus, savedAt,
     commit, undo, redo, canUndo, canRedo,
-    load, replaceAll, addFiles, replaceArt, remove, duplicate, reorder,
+    load, restoreSamples, replaceAll, addFiles, replaceArt, remove, duplicate, reorder,
   }
 })

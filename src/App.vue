@@ -25,7 +25,8 @@ function onKey(e: KeyboardEvent) {
 }
 
 onMounted(async () => {
-  await project.load()
+  const { lost } = await project.load()
+  if (lost) ui.notify(`有 ${lost} 張貼紙的圖片讀不到，已從門上移除。有備份專案檔的話可以從「專案」開啟`)
   ready.value = true
   window.addEventListener('keydown', onKey)
 })
