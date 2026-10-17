@@ -1,0 +1,249 @@
+<title>艙門工作台情境圖</title>
+<style>
+/* Layout: one vertical spine per section, forks spread into side-by-side lanes; each node is a 240×150 screen thumbnail plus one line. */
+:root {
+  --bg: #f3f3f2; --surface: #ffffff; --fg: #1f1d1a; --muted: #6b665f; --line: #d6d2cc;
+  --ok: #2c7a47; --ok-bg: #e7f3eb; --err: #b23a0c; --err-bg: #fbe9e1; --todo: #a26a00; --todo-bg: #fff4d6; --ghost: #8a857d;
+  --wood: #d8c3a3; --plate: #7e5d3d; --act: #6e4f31; --sel: #2f6fd6;
+  --f: system-ui, -apple-system, "PingFang TC", "Microsoft JhengHei", sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #1b1a18; --surface: #242220; --fg: #ece8e2; --muted: #a39d94; --line: #3d3934;
+  --ok: #74c58f; --ok-bg: #1f3326; --err: #f59a6a; --err-bg: #3a2218; --todo: #f0c35a; --todo-bg: #3a2f14; --ghost: #8f897f; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #1b1a18; --surface: #242220; --fg: #ece8e2; --muted: #a39d94; --line: #3d3934;
+  --ok: #74c58f; --ok-bg: #1f3326; --err: #f59a6a; --err-bg: #3a2218; --todo: #f0c35a; --todo-bg: #3a2f14; --ghost: #8f897f; color-scheme: dark }
+* { box-sizing: border-box }
+body { background: var(--bg); color: var(--fg); font: 14px/1.55 var(--f); padding-inline: 16px; padding-block: 20px 60px; margin: 0 }
+h1 { font-size: 22px; margin: 0 0 4px; text-wrap: balance }
+h2 { font-size: 16px; margin: 0; text-wrap: balance }
+.wrap { max-width: 1180px; margin: 0 auto; display: flex; flex-direction: column; gap: 22px }
+.sub { color: var(--muted); margin: 0 }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 13px }
+.legend span { display: inline-flex; align-items: center; gap: 6px }
+.sw { width: 14px; height: 14px; border-radius: 3px; border: 2px solid }
+.sw.ok { border-color: var(--ok); background: var(--ok-bg) } .sw.err { border-color: var(--err); background: var(--err-bg) }
+.sw.todo { border-color: var(--todo); background: var(--todo-bg) } .sw.ghost { border: 2px dashed var(--ghost) }
+.decide { background: var(--todo-bg); border: 1px solid var(--todo); border-radius: 10px; padding: 14px 16px }
+.decide h2 { color: var(--todo); margin-bottom: 6px }
+.decide ol { margin: 0; padding-left: 20px; display: grid; gap: 4px }
+.decide .tag { font-variant-numeric: tabular-nums; font-weight: 600 }
+.settled { font-size: 13px; color: var(--muted); margin: 8px 0 0 }
+section.part { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px 16px 22px }
+.part > h2 { margin-bottom: 14px }
+.scroll { overflow-x: auto; padding-bottom: 6px }
+.flow { display: flex; flex-direction: column; align-items: center }
+.arrow { width: 2px; min-height: 30px; background: var(--line); position: relative; margin: 2px 0 }
+.arrow::after { content: ""; position: absolute; bottom: -2px; left: -5px; border: 6px solid transparent; border-top-color: var(--line); border-bottom: 0 }
+.arrow[data-l]::before { content: attr(data-l); position: absolute; left: 12px; top: 50%; transform: translateY(-50%); white-space: nowrap; font-size: 12px; color: var(--muted) }
+.gate { border: 1px solid var(--line); border-radius: 999px; padding: 4px 14px; font-size: 13px; background: var(--bg) }
+.fork { display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); gap: 16px; min-width: calc(var(--n) * 270px); width: 100%; border-top: 2px solid var(--line); padding-top: 10px; margin-top: 2px }
+.lane { display: flex; flex-direction: column; align-items: center; min-width: 0 }
+.lane-l { font-size: 12.5px; font-weight: 600; text-align: center; margin-bottom: 4px; min-height: 2.6em; display: flex; align-items: end }
+.node { width: 252px; border: 2px solid var(--ok); background: var(--surface); border-radius: 10px; padding: 6px; display: flex; flex-direction: column; gap: 5px }
+.node.err { border-color: var(--err) } .node.todo { border-color: var(--todo) } .node.ghost { border: 2px dashed var(--ghost) }
+.node .no { font-size: 11.5px; font-weight: 700; font-variant-numeric: tabular-nums }
+.node.ok .no { color: var(--ok) } .node.err .no { color: var(--err) } .node.todo .no { color: var(--todo) } .node.ghost .no { color: var(--ghost) }
+.note { font-size: 12.5px; line-height: 1.4 }
+.api { border: 1px dashed var(--line); border-radius: 8px; padding: 4px 10px; font-size: 12px; color: var(--muted) }
+
+/* screen thumbnails: what the person actually sees (light UI, as shipped) */
+.scr { width: 240px; height: 150px; border-radius: 6px; background: #f3f3f2; position: relative; overflow: hidden; border: 1px solid #d6d2cc; font-family: var(--f); color: #1f1d1a }
+.scr .top { position: absolute; inset: 0 0 auto 0; height: 14px; border-bottom: 1px solid #ddd; display: flex; align-items: center; gap: 4px; padding: 0 5px; font-size: 6px; background: #f3f3f2 }
+.scr .top b { margin-right: auto; font-size: 6.5px }
+.scr .pbtn { background: var(--act); color: #fff; border-radius: 2px; padding: 1px 4px; font-size: 5.5px }
+.scr .pbtn.hi { outline: 2px solid var(--sel); outline-offset: 1px }
+.scr .left { position: absolute; left: 5px; top: 19px; width: 52px; display: flex; flex-direction: column; gap: 3px }
+.scr .left i { display: block; height: 5px; background: #ddd8d1; border-radius: 1px }
+.scr .left .add { height: 8px; background: var(--act); border-radius: 2px }
+.scr .door { position: absolute; left: 98px; top: 19px; width: 46px; height: 124px; background: var(--wood); border-radius: 1px }
+.scr .door::before { content: ""; position: absolute; left: 16px; top: 8px; width: 14px; height: 14px; border-radius: 50%; background: var(--plate) }
+.scr .door::after { content: ""; position: absolute; right: 0; top: 50px; width: 10px; height: 16px; border: 1px dashed #c2410c; background: rgba(194,65,12,.12) }
+.scr .stk { position: absolute; width: 9px; height: 9px; border-radius: 50%; background: #1f3a6b; border: 1px solid #fff }
+.scr .stk.sel { outline: 1.5px solid var(--sel); outline-offset: 1px }
+.scr .stk.bad { outline: 1.5px dashed #c2410c; outline-offset: 1px }
+.scr .right { position: absolute; right: 5px; top: 19px; width: 62px; display: flex; flex-direction: column; gap: 3px; font-size: 5.5px }
+.scr .right i { display: block; height: 4px; background: #ddd8d1; border-radius: 1px }
+.scr .right .w { color: #b23a0c }
+.scr .right .ok { color: #2c7a47 }
+.scr .right .btn { border: 1px solid #ccc; border-radius: 2px; padding: 1px 2px; background: #fff }
+.scr .toast { position: absolute; left: 50%; bottom: 6px; transform: translateX(-50%); background: #1f1d1a; color: #f3f3f2; font-size: 5.5px; padding: 2px 5px; border-radius: 3px; white-space: nowrap; max-width: 228px; overflow: hidden; text-overflow: ellipsis }
+.scr .toast u { text-decoration: underline }
+.scr .dim { position: absolute; inset: 0; background: rgba(10,16,26,.45) }
+.scr .dlg { position: absolute; left: 30px; top: 20px; width: 180px; height: 112px; background: #fff; border-radius: 4px; padding: 5px; display: grid; grid-template-columns: 1fr 58px; gap: 5px; font-size: 5.5px }
+.scr .dlg .cv { background: repeating-conic-gradient(#e4e2df 0 25%, #fff 0 50%) 0 0 / 8px 8px; border-radius: 2px; position: relative }
+.scr .dlg .cv::after { content: ""; position: absolute; inset: 22px 30px; background: #e98a2e; border-radius: 50% 50% 40% 40% }
+.scr .dlg .cv.empty::after { display: none }
+.scr .plist { position: absolute; left: 5px; top: 19px; width: 80px; display: flex; flex-direction: column; gap: 3px; font-size: 5.5px }
+.scr .seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: #e4e2df; border-radius: 2px; padding: 1px }
+.scr .seg span { text-align: center; padding: 1px 0 }
+.scr .seg span:first-child { background: #fff; border-radius: 1px; font-weight: 600 }
+.scr .dl { background: var(--act); color: #fff; border-radius: 2px; text-align: center; padding: 2px 0 }
+.scr .dl.off { opacity: .4 }
+.scr .warn { background: #fbe9e1; color: #b23a0c; border-radius: 2px; padding: 2px 3px; line-height: 1.3 }
+.scr .sheets { position: absolute; left: 96px; top: 19px; display: flex; gap: 6px }
+.scr .sheet { width: 40px; height: 56px; background: #fff; box-shadow: 0 0 0 1px #ddd; position: relative }
+.scr .sheet i { position: absolute; width: 14px; height: 14px; border-radius: 50%; background: #e98a2e }
+.scr .sheet .tag { position: absolute; left: 2px; top: 2px; background: var(--sel); color: #fff; font-size: 4.5px; padding: 0 2px; font-style: normal }
+.scr .chrome { position: absolute; right: 6px; top: 18px; width: 120px; background: #fff; border: 1px solid #ccc; border-radius: 3px; padding: 4px; font-size: 5.5px; box-shadow: 0 2px 6px rgba(0,0,0,.2) }
+.scr .paper { position: absolute; left: 70px; top: 18px; width: 100px; height: 128px; background: #fff; box-shadow: 0 0 0 1px #ccc }
+.scr .paper .bar { position: absolute; left: 6px; bottom: 5px; width: 40px; border-top: 1px solid #555; font-size: 4.5px; color: #555 }
+.scr .menu { position: absolute; right: 30px; top: 15px; width: 72px; background: #fff; border: 1px solid #ccc; border-radius: 2px; font-size: 5.5px; padding: 2px }
+.scr .menu div { padding: 2px }
+.scr .menu .hl { background: #ecebe9 }
+.scr .savetxt { color: #6b665f }
+.scr .savetxt.err { color: #b23a0c }
+.scr .twin { position: absolute; inset: 18px 6px 6px; display: grid; grid-template-columns: 1fr 1fr; gap: 6px }
+.scr .twin > div { background: #fff; border: 1px solid #ccc; border-radius: 2px; position: relative; font-size: 5.5px; padding: 2px }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>郵輪艙門裝飾工作台：情境全圖</h1>
+    <p class="sub">節點就是使用者當下看到的畫面。框內的字是網站上真的會出現的文案，框外是給我們看的註記。依據 2026-10-17 的 PR #1 版本整理。</p>
+  </header>
+
+  <div class="legend" aria-label="圖例">
+    <span><i class="sw ok"></i>正常</span>
+    <span><i class="sw err"></i>錯誤／死路</span>
+    <span><i class="sw todo"></i>文案或畫面待決定</span>
+    <span><i class="sw ghost"></i>刻意不處理／網站偵測不到</span>
+  </div>
+
+  <div class="decide">
+    <h2>要決定什麼</h2>
+    <ol id="decide"></ol>
+    <p class="settled"><b>已定案：</b>範例貼紙的圖片遺失時直接重畫、不提示；放不下的貼紙不印，列在警告裡給「縮小」或「切塊」；ibon 用 RGB，不轉 CMYK；開啟專案檔可以用復原回到原本的排版。</p>
+  </div>
+
+  <div id="parts"></div>
+</div>
+
+<script>
+// ---------- screen thumbnails ----------
+const topBar = (o = {}) => `<div class="top"><b>郵輪艙門裝飾工作台</b><span class="savetxt ${o.saveErr ? 'err' : ''}">${o.save ?? '已自動儲存 20:29'}</span><span>專案▾</span>${o.print === false ? '' : `<span class="pbtn ${o.hiPrint ? 'hi' : ''}">列印／下載 PDF${o.sheets ? `（${o.sheets} 張）` : ''}</span>`}${o.back ? '' : ''}</div>`
+const stk = (x, y, cls = '') => `<i class="stk ${cls}" style="left:${x}px;top:${y}px"></i>`
+function arrange(o = {}) {
+  const stickers = (o.stickers ?? [[8, 40], [28, 70], [15, 95]]).map(s => stk(...s)).join('')
+  const right = o.right ?? '<b>門</b><i></i><i></i><i style="width:70%"></i>'
+  return `<div class="scr">${topBar(o)}
+    <div class="left"><span class="add"></span><i></i><i></i><i></i><i style="width:60%"></i></div>
+    <div class="door">${stickers}</div>
+    <div class="right">${right}</div>
+    ${o.toast ? `<div class="toast">${o.toast}</div>` : ''}${o.extra ?? ''}</div>`
+}
+function print(o = {}) {
+  const sheets = (o.sheets ?? 2)
+  return `<div class="scr"><div class="top"><span>← 回到門上</span><b>郵輪艙門裝飾工作台</b><span class="savetxt">已自動儲存</span><span>專案▾</span></div>
+    <div class="plist"><b>在哪裡印</b><div class="seg"><span>7-11 ibon</span><span>印刷店</span><span>家用</span></div>
+      <b>紙張</b><i style="display:block;height:6px;background:#fff;border:1px solid #ccc"></i>
+      ${o.count ?? `<span>共 ${sheets} 張 ibon-A3，約 ${sheets * 20} 元</span>`}
+      <div class="dl ${o.off ? 'off' : ''}">${o.busy ?? '下載 PDF'}</div>${o.warn ? `<div class="warn">${o.warn}</div>` : ''}</div>
+    <div class="sheets">${Array.from({ length: Math.min(sheets, 3) }, (_, i) => `<div class="sheet">${o.tiles ? `<em class="tag">A-${i + 1}/3</em>` : ''}<i style="left:6px;top:8px"></i><i style="left:20px;top:28px"></i></div>`).join('')}</div>
+    ${o.toast ? `<div class="toast">${o.toast}</div>` : ''}${o.extra ?? ''}</div>`
+}
+function editor(o = {}) {
+  return `<div class="scr">${topBar()}<div class="dim"></div><div class="dlg"><div class="cv ${o.empty ? 'empty' : ''}"></div>
+    <div><b>去背</b><br>點一下要去掉的背景顏色…<br><span style="display:block;background:var(--act);color:#fff;border-radius:2px;padding:1px 2px;margin:3px 0">自動去背（從四邊往內）</span>容許度 ▬▬●▬<br><br>取消　<b>套用</b></div></div>
+    ${o.toast ? `<div class="toast">${o.toast}</div>` : ''}</div>`
+}
+const paper = (txt) => `<div class="scr" style="background:#e9e6e1"><div class="paper"><i class="stk" style="left:12px;top:14px;width:26px;height:26px"></i><i class="stk" style="left:50px;top:40px;width:22px;height:22px"></i><div class="bar">├──── 50 mm ────┤</div></div><div class="toast">${txt}</div></div>`
+
+// ---------- diagram data ----------
+// node: [no, status, screenHtml, note]; arrow: {a: label}; gate: {g: text}; api: {api: text}; fork: {fork: [[label, items...], ...]}
+const D = (n, why) => ({ n, why })
+const decide = [
+  D('B4', '門的下半部排滿了，新加入的圖要放哪？現在是疊在門中間附近，可能蓋到別的貼紙。'),
+  D('C6', '去背做到一半，點視窗外面或按 Esc 會直接關掉，剛剛的修改不見也沒提示。要不要先確認？'),
+  D('D7', 'ibon 拆成多個 PDF 時，瀏覽器可能擋下第 2 個以後的下載，網站偵測不到。要改成一次打包成 zip，還是在畫面上列出每個檔案讓人一個一個按？'),
+  D('E3', '同時開兩個分頁，後存的會默默蓋掉先存的。要偵測並提醒嗎？'),
+  D('A4', '無痕視窗或封鎖網站資料時存不了檔，只有頂端一行小紅字。這樣夠醒目嗎？'),
+  D('B3', 'iPhone 照片常是 HEIC，現在讀不到只會說「請換成 PNG、JPG 或 SVG」。要支援 HEIC 嗎？'),
+]
+
+const parts = [
+  { t: 'A. 打開網站', flow: [
+    { g: '這個瀏覽器有沒有上次的存檔？' },
+    { fork: [
+      ['第一次來', ['A1', 'ok', arrange({ sheets: 1 }), '門上有 3 張範例，清單標題旁有「清掉範例」']],
+      ['有存檔', ['A2', 'ok', arrange({ stickers: [[8, 34], [30, 60], [10, 82], [26, 100]], sheets: 2 }), '回到上次的排版']],
+      ['存檔裡的圖片讀不到', ['A3', 'ok', arrange({ stickers: [[8, 40], [28, 70], [15, 95]], toast: '有 2 張貼紙的圖片讀不到，已從門上移除…' }), '只有自己的圖會提示；範例遺失就直接重畫']],
+      ['無痕視窗／封鎖網站資料', ['A4', 'todo', arrange({ save: '沒辦法存在這個瀏覽器，請備份專案檔', saveErr: true }), '可以照常排，但關掉就沒了']],
+    ] },
+  ] },
+  { t: 'B. 加入圖片', flow: [
+    ['B1', 'ok', arrange({ extra: '<div class="toast" style="bottom:auto;top:20px;left:32px;transform:none">加入圖片</div>' }), '「加入圖片」、拖進畫面、⌘V 貼上都可以'],
+    { g: '讀得到這個檔案嗎？' },
+    { fork: [
+      ['PNG／JPG／SVG', ['B2', 'ok', arrange({ stickers: [[8, 40], [28, 70], [6, 98, 'sel'], [24, 104]], toast: '已加入 2 張，排在門的下半部' }), '每張找空位放，避開禁貼區；最後一張被選取']],
+      ['HEIC、壞檔、PDF', ['B3', 'err', arrange({ toast: '讀不到「IMG_2041.HEIC」，請換成 PNG、JPG 或 SVG' }), '其他讀得到的照樣加入']],
+      ['門的下半部已經滿了', ['B4', 'todo', arrange({ stickers: [[4, 64], [16, 64], [28, 64], [4, 80], [16, 80], [28, 80], [4, 96], [16, 96], [28, 96], [18, 52, 'sel']] }), '退回疊在門中間附近，可能蓋到別張']],
+    ] },
+  ] },
+  { t: 'C. 調整一張貼紙', flow: [
+    ['C1', 'ok', arrange({ stickers: [[8, 40], [28, 70, 'sel'], [15, 95]], right: '<b>範例：星星</b><span>寬度 <span class="btn">11</span> cm</span><i></i><i></i><span class="ok">✓ ibon-A3 一張印得下</span><span><span class="btn">去背</span> <span class="btn">換圖</span></span>' }), '點門上或清單的貼紙，右欄換成這張的設定'],
+    { a: '拖曳、縮放、旋轉、改寬度' },
+    { fork: [
+      ['蓋到門牌、門鎖或超出門', ['C2', 'ok', arrange({ stickers: [[8, 40], [34, 54, 'bad sel'], [15, 95]], right: '<b>範例：星星</b><i></i><i></i><span class="w">△ 蓋到門鎖和門把</span>' }), '還是可以放，只是提醒']],
+      ['原圖太小', ['C3', 'ok', arrange({ stickers: [[8, 40], [28, 70, 'sel'], [15, 95]], right: '<b>moon_022</b><i></i><span class="w">△ 74 dpi，印出來會糊，請縮小或換大一點的圖</span>' }), '向量 SVG 不會出現這個']],
+      ['紙張放不下', ['C4', 'ok', arrange({ stickers: [[2, 40, 'sel'], [15, 95]], right: '<b>幽靈屋</b><span class="w">△ ibon-A3 放不下</span><span class="btn">縮到 27 cm，一張印完</span><span>☐ 維持大小，切成幾塊自己拼</span>' }), '兩個出路都在這張的設定裡']],
+      ['刪除', ['C5', 'ok', arrange({ stickers: [[8, 40], [15, 95]], toast: '已刪除「範例：星星」 <u>復原</u>' }), 'Delete 鍵也一樣；⌘Z 隨時可以復原']],
+    ] },
+    { g: '按「去背」' },
+    { fork: [
+      ['點背景或自動去背', ['C6', 'todo', editor(), '點視窗外面就關掉，修改不保留']],
+      ['點到透明的地方', ['C7', 'ok', editor({ toast: '那裡已經是透明的了' }), '']],
+      ['把整張都去掉了', ['C8', 'err', editor({ empty: true, toast: '整張都去掉了，按「上一步」或調低容許度' }), '套用被擋下，視窗不關']],
+      ['背景很雜的照片', ['C9', 'ghost', editor(), '點色去背效果有限；說明裡建議先用 remove.bg']],
+    ] },
+  ] },
+  { t: 'D. 印出來', flow: [
+    ['D1', 'ok', arrange({ hiPrint: true, sheets: 2 }), '排好之後按右上「列印／下載 PDF」'],
+    ['D2', 'ok', print(), '預設 7-11 ibon、A3；張數、費用、下載鈕在最上面'],
+    { g: '每張貼紙都印得出來嗎？' },
+    { fork: [
+      ['都放得下', ['D3', 'ok', print({ busy: '產生中 1 / 2 張…', off: true }), '350 dpi；SVG 這時才重新算圖']],
+      ['有放不下的', ['D4', 'ok', print({ warn: '這些比 ibon-A3 能印的範圍大，現在不會印出來：幽靈屋 [縮到 27 cm] [切成幾塊]' }), '不處理也能下載，只是那張不會印']],
+      ['選了切成幾塊', ['D5', 'ok', print({ sheets: 3, tiles: true }), '每塊左上標 A-1/3，PDF 上小字標重疊 10 mm']],
+      ['門上沒有貼紙', ['D6', 'ok', print({ sheets: 0, count: '<span>門上還沒有可以印的貼紙。</span>', off: true }), '下載鈕停用']],
+    ] },
+    { api: '瀏覽器在本機產生 PDF（不經過伺服器）' },
+    { fork: [
+      ['一個檔就夠', ['D8', 'ok', print({ toast: '已下載 PDF' }), '']],
+      ['ibon 超過 8 MB，拆成多檔', ['D7', 'err', print({ toast: '已下載 3 個 PDF（ibon 單檔有大小限制，所以分開）', extra: '<div class="chrome">這個網站想下載多個檔案<br><b>封鎖</b>　允許</div>' }), '瀏覽器擋掉時，畫面還是說「已下載 3 個」']],
+      ['大圖太多，記憶體不夠', ['D9', 'err', print({ toast: 'PDF 產生失敗：…' }), '錯誤訊息是瀏覽器給的英文原文']],
+    ] },
+    { a: '帶去 7-11 印第 1 張' },
+    { fork: [
+      ['比例尺量起來 5 公分', ['D10', 'ok', paper('先印 1 張，量比例尺，對了再印剩下的'), '整批印']],
+      ['不是 5 公分', ['D11', 'ghost', paper('機台縮放了：網站偵測不到'), '可能是紙張選錯；只能靠印前那句提醒']],
+    ] },
+  ] },
+  { t: 'E. 換電腦、備份、同時開很多頁', flow: [
+    ['E1', 'ok', arrange({ extra: '<div class="menu"><div class="hl">備份專案檔<br>下載 .json，換電腦時用</div><div>開啟專案檔<br>取代目前的排版，可以按復原回來</div></div>' }), '「專案」選單'],
+    { fork: [
+      ['開啟正確的專案檔', ['E2', 'ok', arrange({ toast: '已開啟專案，共 16 張貼紙' }), '原本的排版按 ⌘Z 可以回來']],
+      ['選錯檔案', ['E4', 'err', arrange({ toast: '這不是郵輪艙門裝飾工作台的專案檔。' }), '排版不受影響']],
+      ['同時開兩個分頁在改', ['E3', 'todo', `<div class="scr"><div class="top"><b>兩個分頁</b></div><div class="twin"><div>分頁 1<br>移動了米奇<br>已自動儲存 20:31</div><div>分頁 2<br>加入了南瓜<br>已自動儲存 20:32</div></div></div>`, '後存的蓋掉先存的，米奇的移動默默不見']],
+    ] },
+  ] },
+]
+
+// ---------- render ----------
+const esc = s => s
+document.getElementById('decide').innerHTML = decide.map(d => `<li><span class="tag">${d.n}</span>　${d.why}</li>`).join('')
+const node = ([no, st, scr, note]) => `<div class="node ${st}"><span class="no">${no}</span>${scr}${note ? `<div class="note">${note}</div>` : ''}</div>`
+function renderFlow(items) {
+  const out = []
+  items.forEach((it, i) => {
+    if (i > 0 && !it.a && !items[i - 1].a) out.push('<div class="arrow"></div>')
+    if (Array.isArray(it)) out.push(node(it))
+    else if (it.a) out.push(`<div class="arrow" data-l="${it.a}"></div>`)
+    else if (it.g) out.push(`<div class="gate">${it.g}</div>`)
+    else if (it.api) out.push(`<div class="api">${it.api}</div>`)
+    else if (it.fork) out.push(`<div class="fork" style="--n:${it.fork.length}">${it.fork.map(([l, ...ns]) => `<div class="lane"><div class="lane-l">${l}</div><div class="arrow"></div>${ns.map(node).join('<div class="arrow"></div>')}</div>`).join('')}</div>`)
+  })
+  return out.join('')
+}
+document.getElementById('parts').outerHTML = parts.map(p => `<section class="part"><h2>${p.t}</h2><div class="scroll"><div class="flow">${renderFlow(p.flow)}</div></div></section>`).join('')
+</script>
