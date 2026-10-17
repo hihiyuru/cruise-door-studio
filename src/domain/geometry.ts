@@ -44,6 +44,23 @@ export function hits(s: Sticker, keepOut: KeepOut[], door: { w: number; h: numbe
 /** Effective print resolution of a raster asset of `pxWidth` printed `wMm` wide. */
 export const dpiOf = (pxWidth: number, wMm: number) => Math.round(pxWidth / (wMm / 25.4))
 
+/** Below this a printed picture looks soft at arm's length; people stand that close to a cabin door. */
+export const BLURRY_DPI = 150
+/** Whether a picture will print blurry. Vectors never do; the examples are only for trying things out. */
+export const isBlurry = (art: { isSvg: boolean; pxWidth: number }, s: Pick<Sticker, 'w' | 'sample'>) =>
+  !art.isSvg && !s.sample && dpiOf(art.pxWidth, s.w) < BLURRY_DPI
+
+/** Angles the rotation snaps to, and how close (degrees) it has to be. */
+export const SNAP_ANGLES = [-180, -90, 0, 90, 180]
+export const SNAP_TOLERANCE_DEG = 4
+export const snapAngle = (deg: number) => SNAP_ANGLES.find(t => Math.abs(deg - t) <= SNAP_TOLERANCE_DEG) ?? deg
+
+/** A sticker may be at most this many times the door width (lets people overshoot while resizing). */
+const MAX_WIDTH_PER_DOOR = 1.5
+/** Smallest sticker anyone can still pick up. */
+export const MIN_STICKER_MM = 10
+export const clampStickerWidth = (w: number, doorW: number) => Math.max(MIN_STICKER_MM, Math.min(doorW * MAX_WIDTH_PER_DOOR, w))
+
 /**
  * Largest artwork width (rounded down to 0.5 cm) that lets the sticker fit an area
  * of usableW × usableH in either orientation. Returns null when it already fits.

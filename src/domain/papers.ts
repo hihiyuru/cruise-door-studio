@@ -37,10 +37,10 @@ const HOME: Paper[] = [
 
 export const CUSTOM_PAPER_ID = 'custom'
 
-export const PLACES: { id: PrintPlace; short: string; hint: string }[] = [
-  { id: 'ibon', short: '7-11 ibon', hint: '一般紙，A3 彩色一張約 20 元。' },
-  { id: 'shop', short: '印刷店', hint: '可以選相紙和大尺寸。' },
-  { id: 'home', short: '家用印表機', hint: '以 A4 為主。' },
+export const PLACES: { id: PrintPlace; label: string; hint: string }[] = [
+  { id: 'ibon', label: '7-11 ibon', hint: '一般紙，A3 彩色一張約 20 元。' },
+  { id: 'shop', label: '印刷店', hint: '可以選相紙和大尺寸。' },
+  { id: 'home', label: '家用印表機', hint: '以 A4 為主。' },
 ]
 
 export function papersFor(place: PrintPlace): Paper[] {
@@ -62,7 +62,7 @@ export function paperName(p: Paper): string {
 }
 
 /** Short name used in file names. */
-export function paperShortName(place: PrintPlace, p: Paper): string {
+export function paperFileName(place: PrintPlace, p: Paper): string {
   if (p.id === CUSTOM_PAPER_ID) return `${p.w}x${p.h}mm`
   const base = p.id.replace('ibon-', '').toUpperCase().replace('A3PLUS', 'A3加大')
   return place === 'ibon' ? `ibon-${base}` : base

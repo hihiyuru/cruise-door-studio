@@ -10,8 +10,8 @@ export function useBackup() {
   const ui = useUi()
   return async function backup() {
     try {
-      const used = new Set(project.p.stickers.flatMap(s => [s.assetId, s.origAssetId]))
-      const blob = await exportProject(JSON.parse(JSON.stringify(project.p)), [...assets.values()].filter(a => used.has(a.id)))
+      const used = new Set(project.state.stickers.flatMap(s => [s.assetId, s.origAssetId]))
+      const blob = await exportProject(JSON.parse(JSON.stringify(project.state)), [...assets.values()].filter(a => used.has(a.id)))
       downloadBlob(blob, `艙門裝飾專案-${stamp()}.json`)
       ui.notify('已下載備份。換電腦時用「開啟備份」接著做。')
     } catch (e) {

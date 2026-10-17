@@ -6,11 +6,11 @@ import type { PrintPlace } from '../domain/types'
 /** Where and on what paper to print. Shared by the top-bar picker and the print step, so both always agree. */
 export function usePrintSettings() {
   const project = useProject()
-  const pr = computed(() => project.p.print)
+  const pr = computed(() => project.state.print)
   const papers = computed(() => papersFor(pr.value.place))
   const place = computed(() => PLACES.find(p => p.id === pr.value.place)!)
   /** e.g. 「7-11 ibon・A3」 */
-  const summary = computed(() => `${place.value.short}・${paperName(project.paper)}`)
+  const summary = computed(() => `${place.value.label}・${paperName(project.paper)}`)
 
   function setPlace(id: PrintPlace) {
     pr.value.place = id

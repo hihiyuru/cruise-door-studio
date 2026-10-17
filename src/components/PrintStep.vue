@@ -5,8 +5,9 @@ import { useProject } from '../stores/project'
 import { useUi } from '../stores/ui'
 import { useUndoToast } from '../composables/useUndoToast'
 import { assets, lookupArtwork } from '../stores/assets'
-import { PLACES, papersFor, paperName, paperShortName, CUSTOM_PAPER_ID } from '../domain/papers'
-import { dpiOf, widthToFit } from '../domain/geometry'
+import { PLACES, papersFor, paperName, paperFileName, CUSTOM_PAPER_ID } from '../domain/papers'
+import { isBlurry, widthToFit } from '../domain/geometry'
+import { formatCm } from '../domain/format'
 import { usePrintSettings } from '../composables/usePrintSettings'
 import { buildPdfs, MissingArtworkError } from '../export/pdf'
 import { doorPreviewPng } from '../export/doorPng'
@@ -22,13 +23,12 @@ const { pr, setPlace, setPaper, setCustom } = usePrintSettings()
 
 const papers = computed(() => papersFor(pr.value.place))
 const sheets = computed(() => layout.value.sheets)
-const short = computed(() => paperName(project.paper))
+const paperLabel = computed(() => paperName(project.paper))
 const cost = computed(() => (project.paper.price ? sheets.value.length * project.paper.price : null))
-const cm = (mm: number) => (mm / 10).toFixed(1).replace(/\.0$/, '')
 
-const blurry = computed(() => project.p.stickers.filter(s => {
+const blurry = computed(() => project.state.stickers.filter(s => {
   const a = assets.get(s.assetId)
-  return a && !a.isSvg && !s.sample && dpiOf(a.art.width, s.w) < 150
+  return a && isBlurry({ isSvg: a.isSvg, pxWidth: a.art.width }, s)
 }))
 
 function setNum(key: 'margin' | 'gap', v: string, min: number, max: number) {
@@ -41,7 +41,7 @@ function shrink(id: string, w: number) {
   s.w = w
   s.tile = false
   project.commit()
-  notifyUndoable(`已縮到 ${cm(w)} cm。`)
+  notifyUndoable(`已縮到 ${formatCm(w)} cm。`)
 }
 function split(id: string) {
   const s = project.byId(id)
@@ -75,7 +75,7 @@ async function downloadPdf() {
       maxFileBytes: pr.value.place === 'ibon' ? IBON_MAX_BYTES : undefined,
       onProgress: (d, t) => (busy.value = `產生中 ${d} / ${t} 張…`),
     })
-    const base = `艙門貼紙_${paperShortName(pr.value.place, project.paper)}_${sheets.value.length}張`
+    const base = `艙門貼紙_${paperFileName(pr.value.place, project.paper)}_${sheets.value.length}張`
     if (files.length === 1) {
       downloadBlob(files[0].blob, `${base}.pdf`)
       ui.notify('已下載 PDF。')
@@ -99,7 +99,7 @@ function downloadPart(p: Part) {
 
 async function downloadDoor() {
   try {
-    downloadBlob(await doorPreviewPng(project.door, project.p.stickers, project.p.roomNo, lookupArtwork), '艙門預覽.png')
+    downloadBlob(await doorPreviewPng(project.door, project.state.stickers, project.state.roomNo, lookupArtwork), '艙門預覽.png')
   } catch {
     ui.fail('無法產生預覽圖。')
   }
@@ -115,7 +115,7 @@ async function downloadDoor() {
           <button v-for="pl in PLACES" :key="pl.id" type="button" role="radio" :aria-checked="pr.place === pl.id"
             class="rounded px-2 py-1.5 text-[13px]"
             :class="pr.place === pl.id ? 'bg-surface font-medium shadow-sm' : 'text-muted hover:text-fg'"
-            @click="setPlace(pl.id)">{{ pl.short }}</button>
+            @click="setPlace(pl.id)">{{ pl.label }}</button>
         </div>
         <p class="text-[12.5px] text-muted">{{ PLACES.find(p => p.id === pr.place)!.hint }}</p>
       </div>
@@ -134,7 +134,7 @@ async function downloadDoor() {
 
       <div class="flex flex-col gap-2 border-t border-line pt-4">
         <p v-if="sheets.length" class="text-[15px]">
-          共 <b class="num">{{ sheets.length }}</b> 張 {{ short }}<template v-if="cost">，約 <b class="num">{{ cost }}</b> 元</template>
+          共 <b class="num">{{ sheets.length }}</b> 張 {{ paperLabel }}<template v-if="cost">，約 <b class="num">{{ cost }}</b> 元</template>
         </p>
         <p v-else class="text-[13px] text-muted">門上還沒有貼紙。</p>
         <button type="button" class="btn btn-primary w-full !py-2.5 !text-[14.5px]" :disabled="!sheets.length || !!busy" @click="downloadPdf">
@@ -157,10 +157,10 @@ async function downloadDoor() {
       </p>
 
       <div v-if="layout.tooBig.length" class="warnbox flex flex-col gap-2">
-        <p>這幾張 {{ short }} 印不下：</p>
+        <p>這幾張 {{ paperLabel }} 印不下：</p>
         <div v-for="p in layout.tooBig" :key="p.key" class="flex flex-wrap items-center gap-2">
           <b class="mr-auto">{{ p.sticker.name }}</b>
-          <button v-if="widthToFit(p.sticker, usable.w, usable.h)" type="button" class="btn !py-1" @click="shrink(p.sticker.id, widthToFit(p.sticker, usable.w, usable.h)!)">縮到 {{ cm(widthToFit(p.sticker, usable.w, usable.h)!) }} cm</button>
+          <button v-if="widthToFit(p.sticker, usable.w, usable.h)" type="button" class="btn !py-1" @click="shrink(p.sticker.id, widthToFit(p.sticker, usable.w, usable.h)!)">縮到 {{ formatCm(widthToFit(p.sticker, usable.w, usable.h)!) }} cm</button>
           <button type="button" class="btn !py-1" @click="split(p.sticker.id)">分成幾張印</button>
         </div>
       </div>

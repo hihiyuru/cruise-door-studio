@@ -6,7 +6,8 @@ import { useProject } from '../stores/project'
 import { useUi } from '../stores/ui'
 import { useUndoToast } from '../composables/useUndoToast'
 import { assets, assetsVersion, isSvgFile } from '../stores/assets'
-import { dpiOf, hits, outer, widthToFit } from '../domain/geometry'
+import { clampStickerWidth, hits, isBlurry, outer, snapAngle, widthToFit } from '../domain/geometry'
+import { formatCm } from '../domain/format'
 import { paperName } from '../domain/papers'
 
 const project = useProject()
@@ -17,7 +18,6 @@ const replaceInput = ref<HTMLInputElement>()
 
 const s = computed(() => project.byId(ui.selected))
 const size = computed(() => (s.value ? outer(s.value) : null))
-const cm = (mm: number) => (mm / 10).toFixed(1).replace(/\.0$/, '')
 
 const ZONE_NAMES: Record<string, string> = { 門牌: '門牌', 貓眼: '貓眼', 門鎖和門把: '門把' }
 const paperLabel = computed(() => paperName(project.paper))
@@ -32,8 +32,7 @@ const placement = computed(() => {
   if (zone) return `擋到${ZONE_NAMES[zone] ?? zone}了，挪開一點。`
   if (hit.length) return '超出門外了。'
   const a = assets.get(st.assetId)
-  // the examples are only for trying things out, so they never nag about sharpness
-  if (a && !a.isSvg && !st.sample && dpiOf(a.art.width, st.w) < 150) return '圖太小，印出來會糊。'
+  if (a && isBlurry({ isSvg: a.isSvg, pxWidth: a.art.width }, st)) return '圖太小，印出來會糊。'
   return null
 })
 
@@ -50,8 +49,7 @@ const printFit = computed(() => {
 /** Rotation slider: settle on upright and quarter turns when close, since those are what people aim for. */
 function setRot(v: number) {
   if (!s.value) return
-  for (const t of [-180, -90, 0, 90, 180]) if (Math.abs(v - t) <= 3) v = t
-  s.value.rot = v
+  s.value.rot = snapAngle(v)
 }
 function straighten() {
   if (!s.value) return
@@ -62,7 +60,7 @@ function straighten() {
 function setWidthCm(v: string) {
   const n = parseFloat(v)
   if (!s.value || !(n > 0)) return
-  s.value.w = Math.min(project.door.w * 1.5, n * 10)
+  s.value.w = clampStickerWidth(n * 10, project.door.w)
   project.commit()
 }
 function shrinkToFit() {
@@ -84,7 +82,7 @@ function remove() {
   ui.selected = null
   if (removed) notifyUndoable(`已刪除「${removed.name}」。`)
 }
-function dup(mirror: boolean) {
+function duplicate(mirror: boolean) {
   if (!s.value) return
   const n = project.duplicate(s.value.id, mirror)
   if (n) ui.selected = n.id
@@ -117,7 +115,7 @@ async function onReplace(e: Event) {
       <div class="flex items-center gap-2">
         <input id="ins-w" class="input num w-20" type="number" min="1" step="0.5" :value="+(s.w / 10).toFixed(1)" @change="setWidthCm(($event.target as HTMLInputElement).value)" />
         <span class="text-[13px]">cm</span>
-        <span class="num ml-auto text-[12px] text-muted">成品 {{ cm(size!.w) }} × {{ cm(size!.h) }}</span>
+        <span class="num ml-auto text-[12px] text-muted">成品 {{ formatCm(size!.w) }} × {{ formatCm(size!.h) }}</span>
       </div>
 
       <label class="label" for="ins-rot">旋轉</label>
@@ -149,7 +147,7 @@ async function onReplace(e: Event) {
         <button type="button" class="text-left underline decoration-dotted underline-offset-2" title="換列印地點或紙張" @click.stop="ui.specOpen = true">{{ printFit.text }}</button>
       </p>
       <template v-if="printFit?.fitW">
-        <button type="button" class="btn" @click="shrinkToFit">縮到 {{ cm(printFit.fitW) }} cm</button>
+        <button type="button" class="btn" @click="shrinkToFit">縮到 {{ formatCm(printFit.fitW) }} cm</button>
         <label class="flex items-center gap-2">
           <input v-model="s.tile" type="checkbox" @change="onTile" />分成幾張印，自己拼</label>
       </template>
@@ -159,11 +157,11 @@ async function onReplace(e: Event) {
       <button type="button" class="btn" @click="ui.editing = s.id">去背</button>
       <button type="button" class="btn" @click="replaceInput?.click()">換圖</button>
       <input ref="replaceInput" type="file" accept="image/*,.svg" class="hidden" @change="onReplace" />
-      <button type="button" class="btn" @click="dup(false)">複製</button>
-      <button type="button" class="btn" title="在門的另一側對稱位置複製一張" @click="dup(true)">左右對稱複製</button>
+      <button type="button" class="btn" @click="duplicate(false)">複製</button>
+      <button type="button" class="btn" title="在門的另一側對稱位置複製一張" @click="duplicate(true)">左右對稱複製</button>
     </div>
     <div class="flex flex-wrap items-center gap-2">
-      <button type="button" class="btn" @click="project.reorder(s.id, project.p.stickers.length)">移到最上層</button>
+      <button type="button" class="btn" @click="project.reorder(s.id, project.state.stickers.length)">移到最上層</button>
       <button type="button" class="btn" @click="project.reorder(s.id, 0)">移到最下層</button>
       <button type="button" class="btn btn-quiet btn-danger ml-auto" @click="remove">刪除</button>
     </div>

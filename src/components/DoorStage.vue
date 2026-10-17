@@ -4,7 +4,7 @@ import { Copy, Eraser, MoveDiagonal2, RotateCw, Trash2 } from 'lucide-vue-next'
 import { useProject } from '../stores/project'
 import { useUi } from '../stores/ui'
 import { useUndoToast } from '../composables/useUndoToast'
-import { bbox, outer, hits } from '../domain/geometry'
+import { bbox, clampStickerWidth, hits, outer, snapAngle } from '../domain/geometry'
 import { doorSvg } from '../render/doorSvg'
 import StickerCanvas from './StickerCanvas.vue'
 import type { Sticker } from '../domain/types'
@@ -53,7 +53,7 @@ watch(() => ui.selected, async id => {
 })
 
 const door = computed(() => project.door)
-const svg = computed(() => doorSvg(door.value, { keepOut: project.p.view.keepOut, grid: project.p.view.grid, roomNo: project.p.roomNo }))
+const svg = computed(() => doorSvg(door.value, { keepOut: project.state.view.keepOut, grid: project.state.view.grid, roomNo: project.state.roomNo }))
 const aspect = computed(() => `${door.value.w} / ${door.value.h}`)
 
 let ro: ResizeObserver | undefined
@@ -112,11 +112,11 @@ function onMove(e: PointerEvent) {
     s.x = x
     s.y = drag.y0 + p.y - drag.py
   } else if (drag.mode === 'resize') {
-    s.w = Math.max(10, Math.min(door.value.w * 1.5, (drag.w0 * Math.hypot(p.x - s.x, p.y - s.y)) / drag.d0))
+    s.w = clampStickerWidth((drag.w0 * Math.hypot(p.x - s.x, p.y - s.y)) / drag.d0, door.value.w)
   } else {
     let r = drag.r0 + ((Math.atan2(p.y - s.y, p.x - s.x) - drag.a0) * 180) / Math.PI
     r = ((r + 540) % 360) - 180
-    if (!e.shiftKey) for (const t of [-180, -90, 0, 90, 180]) if (Math.abs(r - t) < 4) r = t
+    if (!e.shiftKey) r = snapAngle(r)
     s.rot = Math.round(r * 10) / 10
   }
 }
@@ -132,10 +132,10 @@ function onUp() {
 /* ---------- keyboard: arrows move 1 mm (Shift: 1 cm), Delete removes ---------- */
 function onKey(e: KeyboardEvent, s: Sticker) {
   const step = e.shiftKey ? 10 : 1
-  const mv = ({ ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] } as Record<string, number[]>)[e.key]
-  if (mv) {
-    s.x += mv[0]
-    s.y += mv[1]
+  const move = ({ ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] } as Record<string, number[]>)[e.key]
+  if (move) {
+    s.x += move[0]
+    s.y += move[1]
     project.commit()
     e.preventDefault()
   } else if (e.key === 'Delete' || e.key === 'Backspace') {
@@ -164,7 +164,7 @@ function onKey(e: KeyboardEvent, s: Sticker) {
         <svg class="pointer-events-none absolute inset-0 h-full w-full" :viewBox="`0 0 ${door.w} ${door.h}`" aria-hidden="true" v-html="svg" />
         <div v-show="snapping" class="pointer-events-none absolute inset-y-0 left-1/2 border-l border-dashed border-select" />
         <div
-          v-for="s in project.p.stickers" :key="s.id"
+          v-for="s in project.state.stickers" :key="s.id"
           class="sticker absolute cursor-grab touch-none outline-offset-2"
           :class="[
             ui.selected === s.id ? 'outline-[1.5px] outline-select' : ui.hovered === s.id ? 'outline-2 outline-select/70' : '',

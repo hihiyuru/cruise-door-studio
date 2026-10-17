@@ -5,7 +5,7 @@ import { useProject } from '../stores/project'
 import { useUi } from '../stores/ui'
 import { useUndoToast } from '../composables/useUndoToast'
 import { hits } from '../domain/geometry'
-import { useAddFiles } from '../composables/useFiles'
+import { useAddFiles } from '../composables/useAddFiles'
 import StickerCanvas from './StickerCanvas.vue'
 
 const project = useProject()
@@ -16,8 +16,8 @@ const fileInput = ref<HTMLInputElement>()
 const over = ref(false)
 
 /** Top layer first, the way design tools list layers. */
-const rows = computed(() => [...project.p.stickers].reverse())
-const hasSamples = computed(() => project.p.stickers.some(s => s.sample))
+const rows = computed(() => [...project.state.stickers].reverse())
+const hasSamples = computed(() => project.state.stickers.some(s => s.sample))
 const problems = (id: string) => {
   const s = project.byId(id)
   return s ? hits(s, project.door.keepOut, project.door) : []
@@ -30,7 +30,7 @@ function onPick(e: Event) {
 }
 
 function clearSamples() {
-  project.p.stickers = project.p.stickers.filter(s => !s.sample)
+  project.state.stickers = project.state.stickers.filter(s => !s.sample)
   ui.selected = null
   project.commit()
   notifyUndoable('已清掉範例。')
@@ -46,8 +46,8 @@ function clearAll() {
   }
   clearTimeout(armed)
   confirming.value = false
-  const n = project.p.stickers.length
-  project.p.stickers = []
+  const n = project.state.stickers.length
+  project.state.stickers = []
   ui.selected = null
   project.commit()
   notifyUndoable(`已清空 ${n} 張。`)
@@ -68,7 +68,7 @@ function clearAll() {
     <p class="-mt-1 text-[12px] text-muted">PNG、JPG、SVG。也可以拖進來或貼上。</p>
 
     <div class="mt-2 flex items-baseline justify-between">
-      <h2 class="section-title">貼紙 <span class="num font-normal text-muted">{{ project.p.stickers.length }}</span></h2>
+      <h2 class="section-title">貼紙 <span class="num font-normal text-muted">{{ project.state.stickers.length }}</span></h2>
       <button v-if="hasSamples" type="button" class="link" @click="clearSamples">清掉範例</button>
     </div>
 
@@ -99,7 +99,7 @@ function clearAll() {
     </ul>
 
     <button v-if="rows.length" type="button" class="link self-start !text-warn" @click="clearAll">
-      {{ confirming ? `再按一次，刪掉全部 ${project.p.stickers.length} 張` : '清空全部貼紙' }}
+      {{ confirming ? `再按一次，刪掉全部 ${project.state.stickers.length} 張` : '清空全部貼紙' }}
     </button>
   </section>
 </template>

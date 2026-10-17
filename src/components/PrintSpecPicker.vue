@@ -28,7 +28,7 @@ onBeforeUnmount(() => { document.removeEventListener('click', onDocClick); docum
         <button v-for="pl in PLACES" :key="pl.id" type="button" role="radio" :aria-checked="pr.place === pl.id"
           class="rounded px-1 py-1.5 text-[12.5px]"
           :class="pr.place === pl.id ? 'bg-surface font-medium shadow-sm' : 'text-muted hover:text-fg'"
-          @click="setPlace(pl.id)">{{ pl.short }}</button>
+          @click="setPlace(pl.id)">{{ pl.label }}</button>
       </div>
       <label class="flex flex-col gap-1">
         <span class="label">紙張</span>

@@ -30,10 +30,10 @@ describe('autosave', () => {
     const { useProject } = await import('./project')
     const project = useProject()
     await project.load()
-    project.p.roomNo = '1'
+    project.state.roomNo = '1'
     project.commit()
     await vi.advanceTimersByTimeAsync(700) // first save has started and is still writing
-    project.p.roomNo = '2'
+    project.state.roomNo = '2'
     project.commit()
     await vi.advanceTimersByTimeAsync(5000)
     expect(project.saveStatus).toBe('saved')
