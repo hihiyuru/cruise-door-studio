@@ -26,6 +26,7 @@
 | `npm test` | Vitest 跑一次 |
 | `npm run build` | `vue-tsc -b` 型別檢查 + `vite build` |
 | `npm run typecheck` | 只跑型別檢查 |
+| `npm run lint` | ESLint（Vue Style Guide＋分層規則），`lint:fix` 自動修排版 |
 
 CI（`.github/workflows/ci.yml`）在 PR 會跑 `npm test` 和 `npm run build`。推之前本機先跑這兩個。
 
@@ -45,6 +46,8 @@ docs/
 ```
 
 ### 放哪裡
+
+> 完整的程式規範（Vue Style Guide、clean code、分層、命名）在 [docs/code-standards.md](./docs/code-standards.md)，寫 Vue 時也會載入 `.claude/skills/vue-best-practices`。`npm run lint` 會檢查能自動檢查的部分。
 
 - **能不碰 DOM 就放 `domain/`，並寫測試**。尺寸、碰撞、排版、切塊、dpi 都是純數學，測試就近放（`packing.test.ts`）
 - 需要 canvas 的放 `render/`；產生檔案給使用者下載的放 `export/`
