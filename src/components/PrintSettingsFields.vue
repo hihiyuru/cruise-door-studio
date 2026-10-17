@@ -19,7 +19,10 @@ function onCustomChange(key: 'w' | 'h', e: Event) {
 </script>
 
 <template>
-  <div class="flex flex-col" :class="compact ? 'gap-3' : 'gap-5'">
+  <div
+    class="flex flex-col"
+    :class="compact ? 'gap-3' : 'gap-5'"
+  >
     <div
       class="flex flex-col gap-2"
       role="radiogroup"

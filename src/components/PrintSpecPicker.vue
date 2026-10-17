@@ -19,11 +19,29 @@ onBeforeUnmount(() => { document.removeEventListener('click', onDocClick); docum
 </script>
 
 <template>
-  <div ref="root" class="relative">
-    <button type="button" class="btn btn-quiet" :aria-expanded="ui.specOpen" aria-haspopup="dialog" title="列印地點與紙張" @click.stop="ui.specOpen = !ui.specOpen">
-      <span class="text-muted">印在</span>{{ summary }}<ChevronDown :size="15" aria-hidden="true" />
+  <div
+    ref="root"
+    class="relative"
+  >
+    <button
+      type="button"
+      class="btn btn-quiet"
+      :aria-expanded="ui.specOpen"
+      aria-haspopup="dialog"
+      title="列印地點與紙張"
+      @click.stop="ui.specOpen = !ui.specOpen"
+    >
+      <span class="text-muted">印在</span>{{ summary }}<ChevronDown
+        :size="15"
+        aria-hidden="true"
+      />
     </button>
-    <div v-if="ui.specOpen" role="dialog" aria-label="列印地點與紙張" class="absolute right-0 z-30 mt-1 w-72 rounded-md border border-line bg-surface p-3 shadow-lg">
+    <div
+      v-if="ui.specOpen"
+      role="dialog"
+      aria-label="列印地點與紙張"
+      class="absolute right-0 z-30 mt-1 w-72 rounded-md border border-line bg-surface p-3 shadow-lg"
+    >
       <PrintSettingsFields compact />
     </div>
   </div>

@@ -39,7 +39,12 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
     <AppTopBar />
     <SaveBanner />
     <main class="mx-auto mt-5 max-w-[1500px]">
-      <p v-if="!ready" class="py-20 text-center text-muted">正在讀取上次的排版…</p>
+      <p
+        v-if="!ready"
+        class="py-20 text-center text-muted"
+      >
+        正在讀取上次的排版…
+      </p>
       <ArrangeStep v-else-if="ui.step === 'arrange'" />
       <PrintStep v-else />
     </main>

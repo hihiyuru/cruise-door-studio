@@ -70,36 +70,111 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
 
 <template>
   <header class="mx-auto flex max-w-[1500px] flex-wrap items-center gap-x-3 gap-y-2 border-b border-line pb-3">
-    <button v-if="ui.step === 'print'" type="button" class="btn btn-quiet -ml-2 !px-2" @click="ui.step = 'arrange'">
-      <ArrowLeft :size="16" aria-hidden="true" />回到門上
+    <button
+      v-if="ui.step === 'print'"
+      type="button"
+      class="btn btn-quiet -ml-2 !px-2"
+      @click="ui.step = 'arrange'"
+    >
+      <ArrowLeft
+        :size="16"
+        aria-hidden="true"
+      />回到門上
     </button>
-    <h1 class="mr-auto text-[17px] font-bold">郵輪艙門裝飾工作台</h1>
+    <h1 class="mr-auto text-[17px] font-bold">
+      郵輪艙門裝飾工作台
+    </h1>
 
-    <span class="text-[12.5px]" :class="project.saveStatus === 'error' || project.saveStatus === 'conflict' ? 'text-warn' : 'text-muted'" aria-live="polite">{{ status }}</span>
+    <span
+      class="text-[12.5px]"
+      :class="project.saveStatus === 'error' || project.saveStatus === 'conflict' ? 'text-warn' : 'text-muted'"
+      aria-live="polite"
+    >{{ status }}</span>
 
     <div class="flex items-center">
-      <button type="button" class="btn btn-quiet !px-2" :disabled="!project.canUndo" title="復原（⌘Z）" aria-label="復原" @click="undo"><Undo2 :size="17" /></button>
-      <button type="button" class="btn btn-quiet !px-2" :disabled="!project.canRedo" title="重做（⇧⌘Z）" aria-label="重做" @click="redo"><Redo2 :size="17" /></button>
+      <button
+        type="button"
+        class="btn btn-quiet !px-2"
+        :disabled="!project.canUndo"
+        title="復原（⌘Z）"
+        aria-label="復原"
+        @click="undo"
+      >
+        <Undo2 :size="17" />
+      </button>
+      <button
+        type="button"
+        class="btn btn-quiet !px-2"
+        :disabled="!project.canRedo"
+        title="重做（⇧⌘Z）"
+        aria-label="重做"
+        @click="redo"
+      >
+        <Redo2 :size="17" />
+      </button>
     </div>
 
-    <div ref="menu" class="relative">
-      <button type="button" class="btn" :aria-expanded="menuOpen" aria-haspopup="menu" @click="menuOpen = !menuOpen">
-        備份<ChevronDown :size="15" aria-hidden="true" />
+    <div
+      ref="menu"
+      class="relative"
+    >
+      <button
+        type="button"
+        class="btn"
+        :aria-expanded="menuOpen"
+        aria-haspopup="menu"
+        @click="menuOpen = !menuOpen"
+      >
+        備份<ChevronDown
+          :size="15"
+          aria-hidden="true"
+        />
       </button>
-      <div v-if="menuOpen" role="menu" class="absolute right-0 z-30 mt-1 w-56 rounded-md border border-line bg-surface p-1 shadow-lg">
-        <button type="button" role="menuitem" class="block w-full rounded px-3 py-2 text-left hover:bg-surface-2" @click="backup">
+      <div
+        v-if="menuOpen"
+        role="menu"
+        class="absolute right-0 z-30 mt-1 w-56 rounded-md border border-line bg-surface p-1 shadow-lg"
+      >
+        <button
+          type="button"
+          role="menuitem"
+          class="block w-full rounded px-3 py-2 text-left hover:bg-surface-2"
+          @click="backup"
+        >
           下載備份<span class="block text-[12px] text-muted">排版和圖片存成一個檔案，換電腦也能接著做</span>
         </button>
-        <button type="button" role="menuitem" class="block w-full rounded px-3 py-2 text-left hover:bg-surface-2" @click="openFile">
+        <button
+          type="button"
+          role="menuitem"
+          class="block w-full rounded px-3 py-2 text-left hover:bg-surface-2"
+          @click="openFile"
+        >
           開啟備份<span class="block text-[12px] text-muted">會取代目前的排版，可以復原</span>
         </button>
       </div>
-      <input ref="fileInput" type="file" accept=".json,application/json" class="hidden" @change="onOpen" />
+      <input
+        ref="fileInput"
+        type="file"
+        accept=".json,application/json"
+        class="hidden"
+        @change="onOpen"
+      >
     </div>
 
     <PrintSpecPicker v-if="ui.step === 'arrange'" />
-    <button v-if="ui.step === 'arrange'" type="button" class="btn btn-primary" @click="ui.step = 'print'; ui.selected = null">
-      <Printer :size="16" aria-hidden="true" />列印／下載 PDF<span v-if="sheetCount" class="num opacity-85">（{{ sheetCount }} 張）</span>
+    <button
+      v-if="ui.step === 'arrange'"
+      type="button"
+      class="btn btn-primary"
+      @click="ui.step = 'print'; ui.selected = null"
+    >
+      <Printer
+        :size="16"
+        aria-hidden="true"
+      />列印／下載 PDF<span
+        v-if="sheetCount"
+        class="num opacity-85"
+      >（{{ sheetCount }} 張）</span>
     </button>
   </header>
 </template>

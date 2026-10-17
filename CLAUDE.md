@@ -28,7 +28,7 @@
 | `npm run typecheck` | 只跑型別檢查 |
 | `npm run lint` | ESLint（Vue Style Guide＋分層規則），`lint:fix` 自動修排版 |
 
-CI（`.github/workflows/ci.yml`）在 PR 會跑 `npm test` 和 `npm run build`。推之前本機先跑這兩個。
+CI（`.github/workflows/ci.yml`）在 PR 會跑 `npm run lint`、`npm test` 和 `npm run build`。推之前本機先跑這三個。
 
 ## 目錄
 

@@ -112,34 +112,98 @@ async function downloadDoor() {
 
 <template>
   <div class="grid grid-cols-1 items-start gap-8 lg:grid-cols-[340px_minmax(0,1fr)]">
-    <section class="flex flex-col gap-5" aria-label="印刷設定">
+    <section
+      class="flex flex-col gap-5"
+      aria-label="印刷設定"
+    >
       <PrintSettingsFields />
 
       <div class="flex flex-col gap-2 border-t border-line pt-4">
-        <p v-if="sheets.length" class="text-[15px]">
-          共 <b class="num">{{ sheets.length }}</b> 張 {{ paperLabel }}<template v-if="cost">，約 <b class="num">{{ cost }}</b> 元</template>
+        <p
+          v-if="sheets.length"
+          class="text-[15px]"
+        >
+          共 <b class="num">{{ sheets.length }}</b> 張 {{ paperLabel }}<template v-if="cost">
+            ，約 <b class="num">{{ cost }}</b> 元
+          </template>
         </p>
-        <p v-else class="text-[13px] text-muted">門上還沒有貼紙。</p>
-        <button type="button" class="btn btn-primary w-full !py-2.5 !text-[14.5px]" :disabled="!sheets.length || !!busy" @click="downloadPdf">
-          <Download v-if="!busy" :size="17" aria-hidden="true" />{{ busy ?? '下載 PDF' }}
+        <p
+          v-else
+          class="text-[13px] text-muted"
+        >
+          門上還沒有貼紙。
+        </p>
+        <button
+          type="button"
+          class="btn btn-primary w-full !py-2.5 !text-[14.5px]"
+          :disabled="!sheets.length || !!busy"
+          @click="downloadPdf"
+        >
+          <Download
+            v-if="!busy"
+            :size="17"
+            aria-hidden="true"
+          />{{ busy ?? '下載 PDF' }}
         </button>
-        <div v-if="parts.length" class="flex flex-col gap-1.5">
-          <p class="text-[12.5px] text-muted">每個都要下載，到 ibon 也要每個都傳。</p>
-          <button v-for="p in parts" :key="p.name" type="button" class="btn justify-between" @click="downloadPart(p)">
-            <span class="inline-flex items-center gap-1.5"><Download :size="15" aria-hidden="true" />{{ p.label }}</span>
-            <span v-if="p.done" class="inline-flex items-center gap-1 text-[12px] text-ok"><Check :size="14" aria-hidden="true" />已下載</span>
+        <div
+          v-if="parts.length"
+          class="flex flex-col gap-1.5"
+        >
+          <p class="text-[12.5px] text-muted">
+            每個都要下載，到 ibon 也要每個都傳。
+          </p>
+          <button
+            v-for="p in parts"
+            :key="p.name"
+            type="button"
+            class="btn justify-between"
+            @click="downloadPart(p)"
+          >
+            <span class="inline-flex items-center gap-1.5"><Download
+              :size="15"
+              aria-hidden="true"
+            />{{ p.label }}</span>
+            <span
+              v-if="p.done"
+              class="inline-flex items-center gap-1 text-[12px] text-ok"
+            ><Check
+              :size="14"
+              aria-hidden="true"
+            />已下載</span>
           </button>
         </div>
-        <p v-if="pr.place === 'ibon'" class="text-[12.5px] text-muted">先印一張，確認比例尺是 5 公分。</p>
-        <p v-else-if="pr.place === 'shop'" class="text-[12.5px] text-muted">照實際大小印。需要 CMYK 的話，交給店家轉。</p>
-        <p v-else class="text-[12.5px] text-muted">列印時選「實際大小」，不要選「符合頁面」。</p>
+        <p
+          v-if="pr.place === 'ibon'"
+          class="text-[12.5px] text-muted"
+        >
+          先印一張，確認比例尺是 5 公分。
+        </p>
+        <p
+          v-else-if="pr.place === 'shop'"
+          class="text-[12.5px] text-muted"
+        >
+          照實際大小印。需要 CMYK 的話，交給店家轉。
+        </p>
+        <p
+          v-else
+          class="text-[12.5px] text-muted"
+        >
+          列印時選「實際大小」，不要選「符合頁面」。
+        </p>
       </div>
 
-      <p v-for="sp in layout.split" :key="sp.key" class="text-[12.5px] text-muted">
+      <p
+        v-for="sp in layout.split"
+        :key="sp.key"
+        class="text-[12.5px] text-muted"
+      >
         「{{ sp.sticker.name }}」分成 {{ sp.tile!.n }} 張印（{{ sp.tile!.label }}-1～{{ sp.tile!.label }}-{{ sp.tile!.n }}），拼的時候疊 1 公分對齊。
       </p>
 
-      <div v-if="oversized.length" class="warnbox flex flex-col gap-2">
+      <div
+        v-if="oversized.length"
+        class="warnbox flex flex-col gap-2"
+      >
         <p>這幾張 {{ paperLabel }} 印不下：</p>
         <div
           v-for="o in oversized"
@@ -164,26 +228,66 @@ async function downloadDoor() {
           </button>
         </div>
       </div>
-      <p v-if="blurry.length" class="warnbox">
+      <p
+        v-if="blurry.length"
+        class="warnbox"
+      >
         「{{ blurryNames }}」圖太小，印出來會糊。
       </p>
 
       <details class="text-[13px]">
-        <summary class="cursor-pointer text-muted">紙張邊界與間距</summary>
+        <summary class="cursor-pointer text-muted">
+          紙張邊界與間距
+        </summary>
         <div class="mt-2 grid grid-cols-2 gap-3">
-          <label class="flex flex-col gap-1"><span class="label">邊界（mm）</span><input class="input num" type="number" min="6" max="25" :value="pr.margin" @change="setNum('margin', ($event.target as HTMLInputElement).value, 6, 25)" /></label>
-          <label class="flex flex-col gap-1"><span class="label">間距（mm）</span><input class="input num" type="number" min="0" max="20" :value="pr.gap" @change="setNum('gap', ($event.target as HTMLInputElement).value, 0, 20)" /></label>
+          <label class="flex flex-col gap-1"><span class="label">邊界（mm）</span><input
+            class="input num"
+            type="number"
+            min="6"
+            max="25"
+            :value="pr.margin"
+            @change="setNum('margin', ($event.target as HTMLInputElement).value, 6, 25)"
+          ></label>
+          <label class="flex flex-col gap-1"><span class="label">間距（mm）</span><input
+            class="input num"
+            type="number"
+            min="0"
+            max="20"
+            :value="pr.gap"
+            @change="setNum('gap', ($event.target as HTMLInputElement).value, 0, 20)"
+          ></label>
         </div>
       </details>
 
-      <button type="button" class="link self-start" @click="downloadDoor">下載整扇門的預覽圖</button>
+      <button
+        type="button"
+        class="link self-start"
+        @click="downloadDoor"
+      >
+        下載整扇門的預覽圖
+      </button>
     </section>
 
-    <section class="min-w-0" aria-label="每一張的預覽">
-      <p v-if="!sheets.length" class="text-[13px] text-muted">回到門上加入圖片後，這裡會顯示排好的紙張。</p>
+    <section
+      class="min-w-0"
+      aria-label="每一張的預覽"
+    >
+      <p
+        v-if="!sheets.length"
+        class="text-[13px] text-muted"
+      >
+        回到門上加入圖片後，這裡會顯示排好的紙張。
+      </p>
       <div class="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-4">
-        <SheetPreview v-for="(sh, i) in sheets" :key="i" :sheet="sh" :paper="project.paper" :margin="pr.margin" :index="i"
-          :label="`第 ${i + 1} 張`" />
+        <SheetPreview
+          v-for="(sh, i) in sheets"
+          :key="i"
+          :sheet="sh"
+          :paper="project.paper"
+          :margin="pr.margin"
+          :index="i"
+          :label="`第 ${i + 1} 張`"
+        />
       </div>
     </section>
   </div>

@@ -27,5 +27,9 @@ watch(() => props.sticker.w, later)
 </script>
 
 <template>
-  <canvas ref="el" class="block h-full w-full" aria-hidden="true" />
+  <canvas
+    ref="el"
+    class="block h-full w-full"
+    aria-hidden="true"
+  />
 </template>
