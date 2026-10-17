@@ -1,0 +1,32 @@
+{
+  "name": "cruise-door-studio",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc -b && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "typecheck": "vue-tsc -b"
+  },
+  "dependencies": {
+    "jspdf": "^4.2.1",
+    "pinia": "^4.1.0",
+    "vue": "^3.5.13"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "@vitejs/plugin-vue": "^5.2.3",
+    "@vue/test-utils": "^2.5.1",
+    "@vue/tsconfig": "^0.7.0",
+    "jsdom": "^29.1.1",
+    "tailwindcss": "^4.3.3",
+    "typescript": "~5.8.3",
+    "vite": "^6.3.5",
+    "vitest": "^5.0.5",
+    "vue-tsc": "^2.2.8"
+  },
+  "description": "把貼紙排在等比例的郵輪艙門上，照實際尺寸排進紙張並輸出可列印的 PDF。",
+  "license": "MIT"
+}
