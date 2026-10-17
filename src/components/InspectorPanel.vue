@@ -1,16 +1,18 @@
 <script setup lang="ts">
+import { storeToRefs } from 'pinia'
 import { computed, ref } from 'vue'
 import { Check, Pencil, TriangleAlert, X } from 'lucide-vue-next'
 import { useProject } from '../stores/project'
 import { useUi } from '../stores/ui'
+import { useUndoToast } from '../composables/useUndoToast'
 import { assets, assetsVersion, isSvgFile } from '../stores/assets'
 import { dpiOf, hits, outer, widthToFit } from '../domain/geometry'
-import { useLayout } from '../composables/useLayout'
 import { paperName } from '../domain/papers'
 
 const project = useProject()
 const ui = useUi()
-const { layout, usable } = useLayout()
+const notifyUndoable = useUndoToast()
+const { layout, usable } = storeToRefs(project)
 const replaceInput = ref<HTMLInputElement>()
 
 const s = computed(() => project.byId(ui.selected))
@@ -80,7 +82,7 @@ function remove() {
   if (!s.value) return
   const removed = project.remove(s.value.id)
   ui.selected = null
-  if (removed) ui.notify(`已刪除「${removed.name}」。`, { action: { label: '復原', run: () => project.undo() } })
+  if (removed) notifyUndoable(`已刪除「${removed.name}」。`)
 }
 function dup(mirror: boolean) {
   if (!s.value) return
@@ -94,7 +96,7 @@ async function onReplace(e: Event) {
   if (!f || !s.value) return
   try {
     await project.replaceArt(s.value.id, f, isSvgFile(f))
-    ui.notify('已換圖。', { action: { label: '復原', run: () => project.undo() } })
+    notifyUndoable('已換圖。')
   } catch {
     ui.fail(`無法開啟 ${f.name}，改用 JPG 或 PNG。`)
   }

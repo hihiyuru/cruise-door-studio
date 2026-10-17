@@ -1,11 +1,13 @@
 import { shallowRef } from 'vue'
 import { loadImage, toCanvas, trim, canvasToBlob, type Canvas } from '../render/canvas'
 import type { StoredAsset } from '../storage/idb'
+import type { Artwork, ArtworkLookup } from '../render/artwork'
 
 /** An uploaded picture plus its working raster (transparent margins trimmed). */
-export interface Asset extends StoredAsset {
-  art: Canvas
-}
+export interface Asset extends StoredAsset, Artwork {}
+
+/** Hand pictures to the render and export layers without them importing this store. */
+export const lookupArtwork: ArtworkLookup = id => assets.get(id)
 
 const RASTER_MAX = 4000
 const SVG_MAX = 3000
@@ -51,18 +53,4 @@ export async function addCanvasAsset(c: Canvas): Promise<Asset> {
 
 export async function restoreAssets(list: StoredAsset[]) {
   await Promise.all(list.map(a => addAsset(a.blob, a.isSvg, a.id).catch(() => null)))
-}
-
-/** Re-render a vector asset so its trimmed width is `targetPx`, for printing. */
-export async function svgAtWidth(a: Asset, targetPx: number): Promise<Canvas> {
-  const url = URL.createObjectURL(a.blob)
-  try {
-    const im = await loadImage(url)
-    const probe = toCanvas(im, 2000, true)
-    const t = trim(probe) ?? probe
-    const hi = toCanvas(im, Math.min(16000, (2000 * targetPx) / t.width), true)
-    return trim(hi) ?? hi
-  } finally {
-    URL.revokeObjectURL(url)
-  }
 }

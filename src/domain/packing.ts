@@ -3,6 +3,8 @@ import { outer } from './geometry'
 
 /** Adjacent strips of a split sticker share this much artwork, for gluing. */
 export const OVERLAP = 10
+/** Free space kept under every piece of a split sticker for its「A-2/6」label, so the label never lands on a neighbour. */
+export const TILE_LABEL_MM = 3.5
 
 export interface Piece {
   /** Unique per piece; stickers use their id, strips use `${id}#${n}`. */
@@ -51,8 +53,9 @@ function cut(len: number, max: number): { n: number; seg: number } | null {
 export function tilesFor(s: Sticker, usableW: number, usableH: number, label: string): Piece[] | null {
   const o = outer(s)
   let best: { cols: { n: number; seg: number }; rows: { n: number; seg: number } } | null = null
-  // a piece may lie either way round on the sheet, so try both orientations of the cell
-  for (const [cw, ch] of [[usableW, usableH], [usableH, usableW]]) {
+  // a piece may lie either way round on the sheet, so try both orientations of the cell;
+  // either way its label needs TILE_LABEL_MM below it on the sheet
+  for (const [cw, ch] of [[usableW, usableH - TILE_LABEL_MM], [usableH - TILE_LABEL_MM, usableW]]) {
     const cols = cut(o.w, cw)
     const rows = cut(o.h, ch)
     if (!cols || !rows || cols.n * rows.n < 2) continue
@@ -82,10 +85,10 @@ class Bin {
   }
 
   /** Best position for a w × h box; lower score is better. */
-  find(w: number, h: number): { x: number; y: number; rot: boolean; score: [number, number] } | null {
+  find(w: number, h: number, canRotate = true): { x: number; y: number; rot: boolean; score: [number, number] } | null {
     let best: { x: number; y: number; rot: boolean; score: [number, number] } | null = null
     for (const f of this.free) {
-      for (const rot of [false, true]) {
+      for (const rot of canRotate ? [false, true] : [false]) {
         const bw = rot ? h : w
         const bh = rot ? w : h
         if (bw > f.w + 1e-6 || bh > f.h + 1e-6) continue
@@ -126,29 +129,41 @@ const ORDERS: ((a: Piece, b: Piece) => number)[] = [
   (a, b) => b.w + b.h - (a.w + a.h),
 ]
 
+type Spot = NonNullable<ReturnType<Bin['find']>>
+
+/** Best spot for a piece in one bin. Split pieces reserve label space below them in whichever way they end up lying. */
+function spotFor(bin: Bin, p: Piece, gap: number): Spot | null {
+  if (!p.tile) return bin.find(p.w + gap, p.h + gap)
+  const upright = bin.find(p.w + gap, p.h + TILE_LABEL_MM + gap, false)
+  const turned = bin.find(p.h + gap, p.w + TILE_LABEL_MM + gap, false)
+  if (turned) turned.rot = true
+  if (!upright || !turned) return upright ?? turned
+  return better(turned.score, upright.score) ? turned : upright
+}
+const better = (a: [number, number], b: [number, number]) => a[0] < b[0] || (a[0] === b[0] && a[1] < b[1])
+
 function packOnce(pieces: Piece[], usableW: number, usableH: number, gap: number, margin: number): Placement[][] {
   const bins: Bin[] = []
   for (const p of pieces) {
-    // pad each box by the gap on its right and bottom; the bin grows by the same amount
-    const w = p.w + gap
-    const h = p.h + gap
     let target: Bin | null = null
-    let spot: ReturnType<Bin['find']> = null
+    let spot: Spot | null = null
     for (const b of bins) {
-      const s = b.find(w, h)
-      if (s && (!spot || s.score[0] < spot.score[0] || (s.score[0] === spot.score[0] && s.score[1] < spot.score[1]))) {
+      const s = spotFor(b, p, gap)
+      if (s && (!spot || better(s.score, spot.score))) {
         target = b
         spot = s
       }
     }
     if (!target || !spot) {
+      // the bin grows by one gap so the gap padding on the last row and column still fits
       target = new Bin(usableW + gap, usableH + gap)
       bins.push(target)
-      spot = target.find(w, h)!
+      spot = spotFor(target, p, gap)!
     }
     const pw = spot.rot ? p.h : p.w
     const ph = spot.rot ? p.w : p.h
-    target.place({ x: spot.x, y: spot.y, w: pw + gap, h: ph + gap })
+    const label = p.tile ? TILE_LABEL_MM : 0
+    target.place({ x: spot.x, y: spot.y, w: pw + gap, h: ph + label + gap })
     target.used.push({ ...p, x: margin + spot.x, y: margin + spot.y, rot: spot.rot, pw, ph })
   }
   return bins.map(b => b.used)

@@ -3,12 +3,15 @@ import { computed, reactive, ref, toRaw } from 'vue'
 import type { ProjectState, Sticker } from '../domain/types'
 import { ADVENTURE, doorFor } from '../domain/doors'
 import { paperFor } from '../domain/papers'
+import { layoutSheets } from '../domain/packing'
 import { bbox, hits, outer } from '../domain/geometry'
 import { currentRev, loadProject, saveProject, SaveConflict, type StoredAsset } from '../storage/idb'
 import { assets, addAsset, addCanvasAsset, restoreAssets } from './assets'
 import { sampleArt } from '../render/samples'
 
 const HISTORY_LIMIT = 50
+/** Wait this long after the last change before writing, so a drag saves once. */
+const SAVE_DEBOUNCE_MS = 600
 
 export const uid = () => Math.random().toString(36).slice(2, 10)
 
@@ -35,16 +38,22 @@ export const useProject = defineStore('project', () => {
   const door = computed(() => doorFor(p.doorId, p.customDoor))
   const paper = computed(() => paperFor(p.print.place, p.print.paperId, p.print.custom))
   const byId = (id: string | null) => (id ? p.stickers.find(s => s.id === id) : undefined)
+  /** How the stickers land on the chosen paper; shared by the top bar, the settings panel and the print step. */
+  const layout = computed(() => layoutSheets(p.stickers, paper.value, p.print.margin, p.print.gap))
+  const usable = computed(() => ({ w: paper.value.w - 2 * p.print.margin, h: paper.value.h - 2 * p.print.margin }))
 
   /* ---------- undo / redo (snapshots of the plain project state) ---------- */
   const snap = () => JSON.stringify(toRaw(p))
   let last = snap()
   const past = ref<string[]>([])
   const future = ref<string[]>([])
+  /** Changes on every commit, undo and redo; an offer to undo one particular step checks it is still the latest. */
+  const head = ref(0)
 
   function apply(json: string) {
     Object.assign(p, JSON.parse(json))
     last = json
+    head.value++
     scheduleSave()
   }
 
@@ -56,6 +65,7 @@ export const useProject = defineStore('project', () => {
     if (past.value.length > HISTORY_LIMIT) past.value.shift()
     future.value = []
     last = now
+    head.value++
     scheduleSave()
   }
   function undo() {
@@ -93,25 +103,37 @@ export const useProject = defineStore('project', () => {
     if (e.data.tab !== tab && e.data.rev > rev) saveStatus.value = 'conflict'
   })
 
+  /* Saves run one after another: a save that starts while the previous one is still writing would carry
+     the old counter and look like another tab's edit. */
+  let queue: Promise<void> = Promise.resolve()
+
+  async function writeNow() {
+    if (saveStatus.value === 'conflict') return
+    try {
+      rev = await saveProject(toRaw(p), assets as Map<string, StoredAsset>, referencedAssets(), rev, tab)
+      channel?.postMessage({ rev, tab })
+      saveStatus.value = 'saved'
+      savedAt.value = new Date()
+    } catch (e) {
+      saveStatus.value = e instanceof SaveConflict ? 'conflict' : 'error'
+    }
+  }
+
   function scheduleSave() {
     clearTimeout(saveTimer)
     if (saveStatus.value === 'conflict') return
     saveStatus.value = 'saving'
-    saveTimer = setTimeout(async () => {
-      try {
-        rev = await saveProject(toRaw(p), assets as Map<string, StoredAsset>, referencedAssets(), rev, tab)
-        channel?.postMessage({ rev, tab })
-        saveStatus.value = 'saved'
-        savedAt.value = new Date()
-      } catch (e) {
-        saveStatus.value = e instanceof SaveConflict ? 'conflict' : 'error'
-      }
-    }, 600)
+    saveTimer = setTimeout(() => { queue = queue.then(writeNow) }, SAVE_DEBOUNCE_MS)
   }
 
   /** Keep this tab's layout after a conflict: overwrite whatever the other tab saved. */
   async function keepThisTab() {
-    rev = await currentRev()
+    try {
+      rev = await currentRev()
+    } catch {
+      saveStatus.value = 'error'
+      return
+    }
     saveStatus.value = 'saved'
     scheduleSave()
   }
@@ -151,11 +173,15 @@ export const useProject = defineStore('project', () => {
     commit()
   }
 
-  /** Open a project file. The previous layout stays one undo step away. */
-  async function replaceAll(project: ProjectState, list: StoredAsset[]) {
+  /** Open a backup. The previous layout stays one undo step away. Returns how many pictures could not be read. */
+  async function replaceAll(project: ProjectState, list: StoredAsset[]): Promise<{ lost: number }> {
     await restoreAssets(list)
-    Object.assign(p, { ...defaultProject(), ...project })
+    const next = { ...defaultProject(), ...project }
+    const before = next.stickers.length
+    next.stickers = next.stickers.filter(s => assets.has(s.assetId))
+    Object.assign(p, next)
     commit()
+    return { lost: before - next.stickers.length }
   }
 
   /* ---------- stickers ---------- */
@@ -248,7 +274,7 @@ export const useProject = defineStore('project', () => {
 
   return {
     p, door, paper, byId, saveStatus, savedAt, keepThisTab,
-    commit, undo, redo, canUndo, canRedo,
+    layout, usable, head, commit, undo, redo, canUndo, canRedo,
     load, restoreSamples, replaceAll, addFiles, replaceArt, remove, duplicate, reorder,
   }
 })

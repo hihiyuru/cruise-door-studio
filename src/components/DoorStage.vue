@@ -3,6 +3,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { Copy, Eraser, MoveDiagonal2, RotateCw, Trash2 } from 'lucide-vue-next'
 import { useProject } from '../stores/project'
 import { useUi } from '../stores/ui'
+import { useUndoToast } from '../composables/useUndoToast'
 import { bbox, outer, hits } from '../domain/geometry'
 import { doorSvg } from '../render/doorSvg'
 import StickerCanvas from './StickerCanvas.vue'
@@ -10,6 +11,7 @@ import type { Sticker } from '../domain/types'
 
 const project = useProject()
 const ui = useUi()
+const notifyUndoable = useUndoToast()
 const doorEl = ref<HTMLDivElement>()
 const scale = ref(1)
 const snapping = ref(false)
@@ -34,7 +36,7 @@ function removeSelected() {
   if (!s) return
   const removed = project.remove(s.id)
   ui.selected = null
-  if (removed) ui.notify(`已刪除「${removed.name}」。`, { action: { label: '復原', run: () => project.undo() } })
+  if (removed) notifyUndoable(`已刪除「${removed.name}」。`)
 }
 function duplicateSelected() {
   const s = selected.value

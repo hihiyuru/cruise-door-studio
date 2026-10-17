@@ -3,12 +3,14 @@ import { computed, ref } from 'vue'
 import { ImagePlus, TriangleAlert } from 'lucide-vue-next'
 import { useProject } from '../stores/project'
 import { useUi } from '../stores/ui'
+import { useUndoToast } from '../composables/useUndoToast'
 import { hits } from '../domain/geometry'
 import { useAddFiles } from '../composables/useFiles'
 import StickerCanvas from './StickerCanvas.vue'
 
 const project = useProject()
 const ui = useUi()
+const notifyUndoable = useUndoToast()
 const add = useAddFiles()
 const fileInput = ref<HTMLInputElement>()
 const over = ref(false)
@@ -31,7 +33,7 @@ function clearSamples() {
   project.p.stickers = project.p.stickers.filter(s => !s.sample)
   ui.selected = null
   project.commit()
-  ui.notify('已清掉範例。', { action: { label: '復原', run: () => project.undo() } })
+  notifyUndoable('已清掉範例。')
 }
 
 let armed: ReturnType<typeof setTimeout> | undefined
@@ -48,7 +50,7 @@ function clearAll() {
   project.p.stickers = []
   ui.selected = null
   project.commit()
-  ui.notify(`已清空 ${n} 張。`, { action: { label: '復原', run: () => project.undo() } })
+  notifyUndoable(`已清空 ${n} 張。`)
 }
 </script>
 

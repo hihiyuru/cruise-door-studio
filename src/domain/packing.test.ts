@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { layoutSheets, tilesFor, OVERLAP } from './packing'
+import { layoutSheets, tilesFor, OVERLAP, TILE_LABEL_MM } from './packing'
 import { outer, widthToFit, hits } from './geometry'
 import { ADVENTURE } from './doors'
 import type { Sticker } from './types'
@@ -88,7 +88,7 @@ describe('tilesFor', () => {
     const covered = strips.reduce((sum, p) => sum + p.w, 0) - OVERLAP * (strips.length - 1)
     expect(covered).toBeCloseTo(o.w, 6)
     expect(strips.at(-1)!.crop!.x + strips.at(-1)!.w).toBeCloseTo(o.w, 6)
-    for (const p of strips) expect(Math.min(p.w, p.h) <= UW && Math.max(p.w, p.h) <= UH).toBe(true)
+    for (const p of strips) expect((p.w <= UW && p.h + TILE_LABEL_MM <= UH) || (p.h <= UW && p.w + TILE_LABEL_MM <= UH)).toBe(true)
   })
 })
 
@@ -103,7 +103,7 @@ describe('tilesFor in both directions', () => {
     const bottom = Math.max(...pieces.map(p => p.crop!.y + p.crop!.h))
     expect(right).toBeCloseTo(o.w, 6)
     expect(bottom).toBeCloseTo(o.h, 6)
-    for (const p of pieces) expect((p.w <= UW && p.h <= UH) || (p.h <= UW && p.w <= UH)).toBe(true)
+    for (const p of pieces) expect((p.w <= UW && p.h + TILE_LABEL_MM <= UH) || (p.h <= UW && p.w + TILE_LABEL_MM <= UH)).toBe(true)
     expect(pieces.map(p => p.tile!.i)).toEqual(pieces.map((_, k) => k + 1))
   })
 
@@ -113,6 +113,23 @@ describe('tilesFor in both directions', () => {
     expect(tooBig).toEqual([])
     expect(split).toHaveLength(1)
     expect(sheets.flat().length).toBe(split[0].tile!.n)
+  })
+})
+
+describe('split piece labels', () => {
+  it('leave room under every split piece so the label never prints on a neighbour, even with no gap', () => {
+    const set = [st('house', 700, 0.525, { tile: true }), ...Array.from({ length: 12 }, (_, i) => st(`bat${i}`, 60, 0.55))]
+    for (const gap of [0, 1, 4]) {
+      const { sheets } = layoutSheets(set, IBON_A3, 8, gap)
+      for (const sheet of sheets) for (const t of sheet.filter(p => p.tile)) {
+        const labelBox = { x: t.x, y: t.y + t.ph, w: t.pw, h: TILE_LABEL_MM }
+        expect(labelBox.y + labelBox.h).toBeLessThanOrEqual(IBON_A3.h - 8 + 1e-6)
+        for (const o of sheet) if (o !== t) {
+          const apart = o.x >= labelBox.x + labelBox.w - 1e-6 || o.x + o.pw <= labelBox.x + 1e-6 || o.y >= labelBox.y + labelBox.h - 1e-6 || o.y + o.ph <= labelBox.y + 1e-6
+          expect(apart).toBe(true)
+        }
+      }
+    }
   })
 })
 

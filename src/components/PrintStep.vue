@@ -1,13 +1,14 @@
 <script setup lang="ts">
+import { storeToRefs } from 'pinia'
 import { computed, ref, watch } from 'vue'
 import { useProject } from '../stores/project'
 import { useUi } from '../stores/ui'
-import { assets } from '../stores/assets'
-import { useLayout } from '../composables/useLayout'
+import { useUndoToast } from '../composables/useUndoToast'
+import { assets, lookupArtwork } from '../stores/assets'
 import { PLACES, papersFor, paperName, paperShortName, CUSTOM_PAPER_ID } from '../domain/papers'
 import { dpiOf, widthToFit } from '../domain/geometry'
 import { usePrintSettings } from '../composables/usePrintSettings'
-import { buildPdfs } from '../export/pdf'
+import { buildPdfs, MissingArtworkError } from '../export/pdf'
 import { doorPreviewPng } from '../export/doorPng'
 import { downloadBlob } from '../export/download'
 import SheetPreview from './SheetPreview.vue'
@@ -15,7 +16,8 @@ import { Check, Download } from 'lucide-vue-next'
 
 const project = useProject()
 const ui = useUi()
-const { layout, usable } = useLayout()
+const notifyUndoable = useUndoToast()
+const { layout, usable } = storeToRefs(project)
 const { pr, setPlace, setPaper, setCustom } = usePrintSettings()
 
 const papers = computed(() => papersFor(pr.value.place))
@@ -39,7 +41,7 @@ function shrink(id: string, w: number) {
   s.w = w
   s.tile = false
   project.commit()
-  ui.notify(`已縮到 ${cm(w)} cm。`, { action: { label: '復原', run: () => project.undo() } })
+  notifyUndoable(`已縮到 ${cm(w)} cm。`)
 }
 function split(id: string) {
   const s = project.byId(id)
@@ -47,7 +49,7 @@ function split(id: string) {
   s.tile = true
   project.commit()
   const first = layout.value.split.find(p => p.sticker.id === id)
-  if (first) ui.notify(`已分成 ${first.tile!.n} 張印。`, { action: { label: '復原', run: () => project.undo() } })
+  if (first) notifyUndoable(`已分成 ${first.tile!.n} 張印。`)
   else ui.fail('紙張太小，無法分張印。')
 }
 
@@ -69,6 +71,7 @@ async function downloadPdf() {
     const files = await buildPdfs(sheets.value, {
       paper: project.paper,
       margin: pr.value.margin,
+      getArtwork: lookupArtwork,
       maxFileBytes: pr.value.place === 'ibon' ? IBON_MAX_BYTES : undefined,
       onProgress: (d, t) => (busy.value = `產生中 ${d} / ${t} 張…`),
     })
@@ -82,7 +85,8 @@ async function downloadPdf() {
     ui.notify(`檔案較大，已分成 ${files.length} 個 PDF。`)
   } catch (e) {
     console.error(e)
-    ui.fail('記憶體不足，無法產生 PDF。先縮小最大的幾張。')
+    if (e instanceof MissingArtworkError) ui.fail(`找不到「${e.stickerName}」的圖，無法產生 PDF。換圖或刪掉這張再試一次。`)
+    else ui.fail('記憶體不足，無法產生 PDF。先縮小最大的幾張。')
   } finally {
     busy.value = null
   }
@@ -95,7 +99,7 @@ function downloadPart(p: Part) {
 
 async function downloadDoor() {
   try {
-    downloadBlob(await doorPreviewPng(project.door, project.p.stickers, project.p.roomNo), '艙門預覽.png')
+    downloadBlob(await doorPreviewPng(project.door, project.p.stickers, project.p.roomNo, lookupArtwork), '艙門預覽.png')
   } catch {
     ui.fail('無法產生預覽圖。')
   }

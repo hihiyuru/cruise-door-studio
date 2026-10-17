@@ -1,8 +1,13 @@
 <script setup lang="ts">
 import { TriangleAlert, X } from 'lucide-vue-next'
+import { computed } from 'vue'
 import { useUi } from '../stores/ui'
+import { useProject } from '../stores/project'
 
 const ui = useUi()
+const project = useProject()
+/** An undo offer only makes sense while its step is still the latest one. */
+const hasAction = computed(() => !!ui.toast?.action && (ui.toast.step === undefined || ui.toast.step === project.head))
 
 function run() {
   const t = ui.toast
@@ -21,7 +26,7 @@ function run() {
     >
       <TriangleAlert v-if="ui.toast.tone === 'error'" :size="16" class="shrink-0" aria-hidden="true" />
       <span>{{ ui.toast.text }}</span>
-      <button v-if="ui.toast.action" type="button" class="shrink-0 font-semibold underline underline-offset-2" @click="run">{{ ui.toast.action.label }}</button>
+      <button v-if="hasAction" type="button" class="shrink-0 font-semibold underline underline-offset-2" @click="run">{{ ui.toast.action?.label }}</button>
       <button v-if="ui.toast.tone === 'error'" type="button" class="-mr-1 shrink-0 rounded p-0.5 hover:bg-warn/10" aria-label="關閉" @click="ui.dismiss()"><X :size="16" /></button>
     </div>
   </div>

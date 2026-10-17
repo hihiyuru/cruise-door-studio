@@ -2,12 +2,14 @@
 import { computed, nextTick, ref, watch } from 'vue'
 import { useProject } from '../stores/project'
 import { useUi } from '../stores/ui'
+import { useUndoToast } from '../composables/useUndoToast'
 import { assets, addCanvasAsset } from '../stores/assets'
 import { ctx2d, trim } from '../render/canvas'
 import { edgeSeeds, erode, floodFill } from '../render/floodFill'
 
 const project = useProject()
 const ui = useUi()
+const notifyUndoable = useUndoToast()
 const el = ref<HTMLCanvasElement>()
 const autoBtn = ref<HTMLButtonElement>()
 const tol = ref(28)
@@ -93,8 +95,11 @@ async function apply() {
     s.assetId = a.id
     s.ar = t.height / t.width
     project.commit()
-    ui.notify('已去背。', { action: { label: '復原', run: () => project.undo() } })
+    notifyUndoable('已去背。')
     close()
+  } catch (e) {
+    console.error(e)
+    ui.fail('記憶體不足，無法套用去背。')
   } finally {
     busy.value = false
   }

@@ -2,7 +2,7 @@
 import { onMounted, ref, watch } from 'vue'
 import type { Sticker } from '../domain/types'
 import { displayCanvas } from '../render/display'
-import { assetsVersion } from '../stores/assets'
+import { assets, assetsVersion } from '../stores/assets'
 
 /** Draws a sticker's finished look (border included) into its own canvas. */
 const props = defineProps<{ sticker: Sticker }>()
@@ -10,7 +10,7 @@ const el = ref<HTMLCanvasElement>()
 
 function draw() {
   const c = el.value
-  const src = displayCanvas(props.sticker)
+  const src = displayCanvas(props.sticker, assets.get(props.sticker.assetId)?.art)
   if (!c || !src) return
   c.width = src.width
   c.height = src.height

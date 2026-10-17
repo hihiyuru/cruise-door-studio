@@ -4,9 +4,10 @@ import { outer } from '../domain/geometry'
 import { canvasToBlob, ctx2d, loadImage, mk } from '../render/canvas'
 import { doorSvgDocument } from '../render/doorSvg'
 import { displayCanvas } from '../render/display'
+import type { ArtworkLookup } from '../render/artwork'
 
 /** A picture of the decorated door, for keeping a record or sharing. */
-export async function doorPreviewPng(door: DoorModel, stickers: Sticker[], roomNo: string): Promise<Blob> {
+export async function doorPreviewPng(door: DoorModel, stickers: Sticker[], roomNo: string, getArtwork: ArtworkLookup): Promise<Blob> {
   const k = 1.4
   const c = mk(door.w * k, door.h * k)
   const x = ctx2d(c)
@@ -14,7 +15,7 @@ export async function doorPreviewPng(door: DoorModel, stickers: Sticker[], roomN
   const im = await loadImage('data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg))
   x.drawImage(im, 0, 0, c.width, c.height)
   for (const s of stickers) {
-    const art = displayCanvas(s)
+    const art = displayCanvas(s, getArtwork(s.assetId)?.art)
     if (!art) continue
     const o = outer(s)
     x.save()

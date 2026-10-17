@@ -1,16 +1,18 @@
 <script setup lang="ts">
+import { storeToRefs } from 'pinia'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { ArrowLeft, ChevronDown, Printer, Redo2, Undo2 } from 'lucide-vue-next'
 import { useProject } from '../stores/project'
 import { useUi } from '../stores/ui'
+import { useUndoToast } from '../composables/useUndoToast'
 import { importProject, ProjectFileError } from '../storage/projectFile'
 import { useBackup } from '../composables/useBackup'
 import PrintSpecPicker from './PrintSpecPicker.vue'
-import { useLayout } from '../composables/useLayout'
 
 const project = useProject()
 const ui = useUi()
-const { layout } = useLayout()
+const notifyUndoable = useUndoToast()
+const { layout } = storeToRefs(project)
 const doBackup = useBackup()
 const fileInput = ref<HTMLInputElement>()
 const menuOpen = ref(false)
@@ -48,10 +50,11 @@ async function onOpen(e: Event) {
   if (!f) return
   try {
     const { project: p, assets: list } = await importProject(f)
-    await project.replaceAll(p, list)
+    const { lost } = await project.replaceAll(p, list)
     ui.selected = null
     ui.step = 'arrange'
-    ui.notify('已開啟備份。', { action: { label: '復原', run: () => project.undo() } })
+    if (lost) ui.fail(`已開啟備份，但找不到 ${lost} 張圖，已從門上移除。`)
+    else notifyUndoable('已開啟備份。')
   } catch (err) {
     ui.fail(err instanceof ProjectFileError ? err.message : '無法開啟，檔案可能已損毀。')
   }
