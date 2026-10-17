@@ -5,6 +5,7 @@ import { useProject } from '../stores/project'
 import { useUi } from '../stores/ui'
 import { importProject, ProjectFileError } from '../storage/projectFile'
 import { useBackup } from '../composables/useBackup'
+import PrintSpecPicker from './PrintSpecPicker.vue'
 import { useLayout } from '../composables/useLayout'
 
 const project = useProject()
@@ -93,6 +94,7 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
       <input ref="fileInput" type="file" accept=".json,application/json" class="hidden" @change="onOpen" />
     </div>
 
+    <PrintSpecPicker v-if="ui.step === 'arrange'" />
     <button v-if="ui.step === 'arrange'" type="button" class="btn btn-primary" @click="ui.step = 'print'; ui.selected = null">
       <Printer :size="16" aria-hidden="true" />列印／下載 PDF<span v-if="sheetCount" class="num opacity-85">（{{ sheetCount }} 張）</span>
     </button>

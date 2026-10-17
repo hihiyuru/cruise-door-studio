@@ -143,7 +143,8 @@ async function onReplace(e: Event) {
       </p>
       <p v-if="printFit && (!printFit.ok || !placement)" class="flex items-center gap-1.5" :class="printFit.ok ? 'text-muted' : 'text-warn'">
         <Check v-if="printFit.ok" :size="15" class="shrink-0 text-ok" aria-hidden="true" />
-        <TriangleAlert v-else :size="15" class="shrink-0" aria-hidden="true" />{{ printFit.text }}
+        <TriangleAlert v-else :size="15" class="shrink-0" aria-hidden="true" />
+        <button type="button" class="text-left underline decoration-dotted underline-offset-2" title="換列印地點或紙張" @click.stop="ui.specOpen = true">{{ printFit.text }}</button>
       </p>
       <template v-if="printFit?.fitW">
         <button type="button" class="btn" @click="shrinkToFit">縮到 {{ cm(printFit.fitW) }} cm</button>
