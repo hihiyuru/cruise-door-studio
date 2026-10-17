@@ -2,15 +2,155 @@
 <html lang="zh-Hant-TW">
   <head>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>郵輪艙門裝飾工作台｜探險號艙門尺寸、門飾排版與實際尺寸列印</title>
+    <meta name="description" content="迪士尼郵輪探險號艙門裝飾工具：在 73 × 197 cm 等比例的艙門上排貼紙、去背、避開門牌和門把，再照實際尺寸排進 A4／A3 輸出 PDF，7-11 ibon 就能印。免費、免註冊，圖片不會上傳。" />
+    <meta name="keywords" content="探險號艙門, 探險號艙門尺寸, 迪士尼郵輪 艙門裝飾, 迪士尼探險號, 郵輪門飾, 艙門磁鐵, 郵輪房門裝飾, Disney Adventure door decorations, cruise door magnets" />
+    <link rel="canonical" href="https://hihiyuru.github.io/cruise-door-studio/" />
+    <meta name="theme-color" content="#6E4F31" />
+
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="description" content="把貼紙排在等比例的郵輪艙門上，照實際尺寸排進 A4／A3 並輸出可列印的 PDF。圖片只存在你的瀏覽器。" />
-    <title>郵輪艙門裝飾工作台</title>
+
+    <!-- link previews on Facebook, LINE, Threads, X -->
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="zh_TW" />
+    <meta property="og:site_name" content="郵輪艙門裝飾工作台" />
+    <meta property="og:title" content="郵輪艙門裝飾工作台｜探險號艙門尺寸、門飾排版與列印" />
+    <meta property="og:description" content="在等比例的探險號艙門（73 × 197 cm）上排門飾，照實際尺寸印出來。免費、免註冊。" />
+    <meta property="og:url" content="https://hihiyuru.github.io/cruise-door-studio/" />
+    <meta property="og:image" content="https://hihiyuru.github.io/cruise-door-studio/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="等比例的郵輪艙門上貼著門飾，旁邊標示 73 × 197 cm" />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <!-- tells search engines this is a free web tool, and feeds the FAQ below into results -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "WebApplication",
+            "name": "郵輪艙門裝飾工作台",
+            "alternateName": "Cruise Door Studio",
+            "url": "https://hihiyuru.github.io/cruise-door-studio/",
+            "applicationCategory": "DesignApplication",
+            "operatingSystem": "Any",
+            "inLanguage": "zh-Hant-TW",
+            "offers": { "@type": "Offer", "price": "0", "priceCurrency": "TWD" },
+            "description": "在等比例的迪士尼郵輪探險號艙門上排貼紙、去背，照實際尺寸輸出 A4／A3 PDF。"
+          },
+          {
+            "@type": "FAQPage",
+            "mainEntity": [
+              {
+                "@type": "Question",
+                "name": "迪士尼郵輪探險號的艙門有多大？",
+                "acceptedAnswer": { "@type": "Answer", "text": "約 73 公分寬、197 公分高。門牌直徑 20.5 公分，上緣距門頂 15.7 公分；貓眼在門牌下方 20 公分；門鎖區距門頂 79 公分、高約 28 公分。" }
+              },
+              {
+                "@type": "Question",
+                "name": "艙門裝飾可以用膠帶嗎？",
+                "acceptedAnswer": { "@type": "Answer", "text": "不行。艙門是金屬門，只能用磁鐵固定，可以印在磁性相紙上，或印好後在背面貼軟磁鐵片。" }
+              },
+              {
+                "@type": "Question",
+                "name": "在 7-11 ibon 印出來的尺寸會變小嗎？",
+                "acceptedAnswer": { "@type": "Answer", "text": "ibon 會把頁面縮到可列印範圍。這個工具的 ibon 紙張直接做成可列印範圍（A3 28.9 × 40.5 公分），印出來就是實際大小。每張底部有 5 公分比例尺可以確認。" }
+              },
+              {
+                "@type": "Question",
+                "name": "上傳的圖片會被傳到網路上嗎？",
+                "acceptedAnswer": { "@type": "Answer", "text": "不會。圖片和排版只存在自己電腦的瀏覽器裡，換電腦可以用「下載備份」帶著走。" }
+              }
+            ]
+          }
+        ]
+      }
+    </script>
   </head>
   <body>
     <div id="app"></div>
+
+    <!-- Plain HTML so search engines and link previews can read it without running the app. -->
+    <article
+      id="guide"
+      class="mx-auto max-w-[1500px] px-4 pb-16 text-[14px] leading-relaxed text-muted"
+    >
+      <div class="max-w-[68ch] border-t border-line pt-8">
+        <h2 class="mb-2 text-[18px] font-bold text-fg">
+          迪士尼郵輪探險號艙門裝飾指南
+        </h2>
+        <p>
+          郵輪的艙門裝飾（door decorations）是很多人上船前會準備的小驚喜。這個免費工具把探險號艙門照比例畫出來，可以先在畫面上排好門飾，再照實際尺寸印出來，不怕做太大或擋到門把。
+        </p>
+
+        <h3 class="mt-6 mb-1 text-[15px] font-semibold text-fg">
+          探險號艙門尺寸
+        </h3>
+        <ul class="list-disc pl-5">
+          <li>整扇門約 73 公分寬、197 公分高。</li>
+          <li>門牌是直徑 20.5 公分的圓形，上緣距門頂 15.7 公分。</li>
+          <li>貓眼在門牌下方約 20 公分。</li>
+          <li>門鎖和門把在右側，距門頂約 79 公分，整區高約 28 公分；下緣距地面約 90 公分。</li>
+        </ul>
+
+        <h3 class="mt-6 mb-1 text-[15px] font-semibold text-fg">
+          哪裡不能貼
+        </h3>
+        <p>
+          門牌、貓眼、門鎖和門把附近都要空出來，擋住門牌會找不到房間，貼在門把旁邊開關門時容易刮掉。工具會把這些區域標成紅色，貼紙蓋到時會提醒。
+        </p>
+
+        <h3 class="mt-6 mb-1 text-[15px] font-semibold text-fg">
+          要用磁鐵，不能用膠帶
+        </h3>
+        <p>
+          艙門是金屬門，裝飾只能用磁鐵固定。可以直接印在磁性相紙上，或印在一般紙上、背面貼軟磁鐵片。大張的圖建議護貝後再貼磁鐵，比較挺也不怕潮濕。
+        </p>
+
+        <h3 class="mt-6 mb-1 text-[15px] font-semibold text-fg">
+          怎麼照實際尺寸印出來
+        </h3>
+        <ol class="list-decimal pl-5">
+          <li>在門上排好貼紙，按右上角「列印／下載 PDF」。</li>
+          <li>選在哪裡印：7-11 ibon、印刷店或家用印表機，工具會自動排進最少張數的紙。</li>
+          <li>7-11 ibon 選 A3 彩色，先印一張，量紙張底部的比例尺是不是 5 公分，對了再全部印。</li>
+          <li>比紙還大的圖可以縮小，或分成幾張印再拼起來（每張重疊 1 公分）。</li>
+        </ol>
+
+        <h3 class="mt-6 mb-1 text-[15px] font-semibold text-fg">
+          常見問題
+        </h3>
+        <dl>
+          <dt class="mt-3 font-medium text-fg">
+            上傳的圖片會被傳到網路上嗎？
+          </dt>
+          <dd>
+            不會。圖片和排版只存在自己電腦的瀏覽器裡，換電腦可以用「備份 → 下載備份」帶著走。
+          </dd>
+          <dt class="mt-3 font-medium text-fg">
+            圖片印出來會糊嗎？
+          </dt>
+          <dd>
+            工具會依照圖片大小提醒「圖太小，印出來會糊」。SVG 向量圖印多大都清楚。
+          </dd>
+          <dt class="mt-3 font-medium text-fg">
+            其他船的艙門也能用嗎？
+          </dt>
+          <dd>
+            門款可以選「自訂尺寸」，輸入自己量到的寬高就能用，只是不會畫出門牌和門鎖。
+          </dd>
+        </dl>
+
+        <p class="mt-8 text-[12px]">
+          本工具為個人製作的非官方工具，與 Disney 無關。
+        </p>
+      </div>
+    </article>
+
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
