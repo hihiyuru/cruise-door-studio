@@ -8,6 +8,15 @@ const project = useProject()
 const door = computed(() => project.door)
 const clampDoor = (v: string) => Math.max(300, Math.min(3000, Math.round(+v || 0)))
 
+function setCustomDoor(key: 'w' | 'h', e: Event) {
+  project.state.customDoor[key] = clampDoor((e.target as HTMLInputElement).value)
+  project.commit()
+}
+function setRoomNo(e: Event) {
+  project.state.roomNo = (e.target as HTMLInputElement).value
+  project.commit()
+}
+
 function setDoor(id: string) {
   project.state.doorId = id
   project.commit()
@@ -28,15 +37,15 @@ function setDoor(id: string) {
     <div v-if="project.state.doorId === CUSTOM_DOOR_ID" class="grid grid-cols-2 gap-3">
       <label class="flex flex-col gap-1"><span class="label">寬（mm）</span>
         <input class="input num" type="number" min="300" max="3000" :value="project.state.customDoor.w"
-          @change="project.state.customDoor.w = clampDoor(($event.target as HTMLInputElement).value); project.commit()" /></label>
+          @change="setCustomDoor('w', $event)" /></label>
       <label class="flex flex-col gap-1"><span class="label">高（mm）</span>
         <input class="input num" type="number" min="300" max="3000" :value="project.state.customDoor.h"
-          @change="project.state.customDoor.h = clampDoor(($event.target as HTMLInputElement).value); project.commit()" /></label>
+          @change="setCustomDoor('h', $event)" /></label>
     </div>
 
     <label v-if="door.fixtures" class="flex flex-col gap-1">
       <span class="label">門牌號碼（只影響預覽）</span>
-      <input class="input num" maxlength="6" :value="project.state.roomNo" @change="project.state.roomNo = ($event.target as HTMLInputElement).value; project.commit()" />
+      <input class="input num" maxlength="6" :value="project.state.roomNo" @change="setRoomNo" />
     </label>
 
     <div class="flex flex-col gap-2 text-[13px]">

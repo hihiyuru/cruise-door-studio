@@ -5,6 +5,7 @@ import { Check, Pencil, TriangleAlert, X } from 'lucide-vue-next'
 import { useProject } from '../stores/project'
 import { useUi } from '../stores/ui'
 import { useUndoToast } from '../composables/useUndoToast'
+import { useStickerActions } from '../composables/useStickerActions'
 import { assets, assetsVersion, isSvgFile } from '../stores/assets'
 import { clampStickerWidth, hits, isBlurry, outer, snapAngle, widthToFit } from '../domain/geometry'
 import { formatCm } from '../domain/format'
@@ -13,6 +14,7 @@ import { paperName } from '../domain/papers'
 const project = useProject()
 const ui = useUi()
 const notifyUndoable = useUndoToast()
+const actions = useStickerActions()
 const { layout, usable } = storeToRefs(project)
 const replaceInput = ref<HTMLInputElement>()
 
@@ -46,6 +48,9 @@ const printFit = computed(() => {
   return { ok: false, text: split ? `${paperLabel.value} 印不下，會分成 ${split.tile!.n} 張印。` : `${paperLabel.value} 印不下。`, fitW }
 })
 
+/** The print line shows when the sticker won't fit, or as the only line when nothing else needs saying. */
+const showPrintFit = computed(() => !!printFit.value && (!printFit.value.ok || !placement.value))
+
 /** Rotation slider: settle on upright and quarter turns when close, since those are what people aim for. */
 function setRot(v: number) {
   if (!s.value) return
@@ -76,16 +81,10 @@ function onTile() {
   if (s.value?.tile && !layout.value.split.some(p => p.sticker.id === s.value!.id)) ui.fail('紙張太小，無法分張印。')
 }
 
-function remove() {
+function onRename(e: Event) {
   if (!s.value) return
-  const removed = project.remove(s.value.id)
-  ui.selected = null
-  if (removed) notifyUndoable(`已刪除「${removed.name}」。`)
-}
-function duplicate(mirror: boolean) {
-  if (!s.value) return
-  const n = project.duplicate(s.value.id, mirror)
-  if (n) ui.selected = n.id
+  s.value.name = (e.target as HTMLInputElement).value
+  project.commit()
 }
 async function onReplace(e: Event) {
   const input = e.target as HTMLInputElement
@@ -105,7 +104,7 @@ async function onReplace(e: Event) {
   <section v-if="s" class="flex min-w-0 flex-col gap-3.5" aria-label="貼紙設定">
     <div class="flex items-center gap-2">
       <input class="input !border-transparent !bg-transparent !px-0 text-[15px] font-semibold hover:!border-line focus:!border-line focus:!px-2"
-        :value="s.name" aria-label="名稱" title="點一下可以改名稱" @change="s.name = ($event.target as HTMLInputElement).value; project.commit()" />
+        :value="s.name" aria-label="名稱" title="點一下可以改名稱" @change="onRename" />
       <Pencil :size="14" class="shrink-0 text-muted" aria-hidden="true" />
       <button type="button" class="btn btn-quiet shrink-0 !px-1.5" aria-label="取消選取" @click="ui.selected = null"><X :size="17" /></button>
     </div>
@@ -141,7 +140,7 @@ async function onReplace(e: Event) {
       <p v-if="placement" class="flex items-center gap-1.5 text-warn">
         <TriangleAlert :size="15" class="shrink-0" aria-hidden="true" />{{ placement }}
       </p>
-      <p v-if="printFit && (!printFit.ok || !placement)" class="flex items-center gap-1.5" :class="printFit.ok ? 'text-muted' : 'text-warn'">
+      <p v-if="showPrintFit && printFit" class="flex items-center gap-1.5" :class="printFit.ok ? 'text-muted' : 'text-warn'">
         <Check v-if="printFit.ok" :size="15" class="shrink-0 text-ok" aria-hidden="true" />
         <TriangleAlert v-else :size="15" class="shrink-0" aria-hidden="true" />
         <button type="button" class="text-left underline decoration-dotted underline-offset-2" title="換列印地點或紙張" @click.stop="ui.specOpen = true">{{ printFit.text }}</button>
@@ -157,13 +156,13 @@ async function onReplace(e: Event) {
       <button type="button" class="btn" @click="ui.editing = s.id">去背</button>
       <button type="button" class="btn" @click="replaceInput?.click()">換圖</button>
       <input ref="replaceInput" type="file" accept="image/*,.svg" class="hidden" @change="onReplace" />
-      <button type="button" class="btn" @click="duplicate(false)">複製</button>
-      <button type="button" class="btn" title="在門的另一側對稱位置複製一張" @click="duplicate(true)">左右對稱複製</button>
+      <button type="button" class="btn" @click="actions.duplicate(s.id)">複製</button>
+      <button type="button" class="btn" title="在門的另一側對稱位置複製一張" @click="actions.duplicate(s.id, true)">左右對稱複製</button>
     </div>
     <div class="flex flex-wrap items-center gap-2">
       <button type="button" class="btn" @click="project.reorder(s.id, project.state.stickers.length)">移到最上層</button>
       <button type="button" class="btn" @click="project.reorder(s.id, 0)">移到最下層</button>
-      <button type="button" class="btn btn-quiet btn-danger ml-auto" @click="remove">刪除</button>
+      <button type="button" class="btn btn-quiet btn-danger ml-auto" @click="actions.remove(s.id)">刪除</button>
     </div>
   </section>
 </template>
