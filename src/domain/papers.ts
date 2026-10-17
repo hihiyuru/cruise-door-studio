@@ -37,10 +37,10 @@ const HOME: Paper[] = [
 
 export const CUSTOM_PAPER_ID = 'custom'
 
-export const PLACES: { id: PrintPlace; label: string; hint: string }[] = [
-  { id: 'ibon', label: '便利商店（7-11 ibon）', hint: '一般紙，A3 彩色一張約 20 元' },
-  { id: 'shop', label: '印刷店', hint: '可選相紙、大尺寸，需要出血與 CMYK' },
-  { id: 'home', label: '家用印表機', hint: 'A4 為主' },
+export const PLACES: { id: PrintPlace; short: string; hint: string }[] = [
+  { id: 'ibon', short: '7-11 ibon', hint: '一般紙，A3 彩色一張約 20 元。頁面已做成 ibon 能印的範圍，印出來是實際大小。' },
+  { id: 'shop', short: '印刷店', hint: '可以選相紙、大尺寸。' },
+  { id: 'home', short: '家用印表機', hint: '以 A4 為主。' },
 ]
 
 export function papersFor(place: PrintPlace): Paper[] {

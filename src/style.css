@@ -1,37 +1,39 @@
 @import "tailwindcss";
 
-/* Palette: harbour navy ink, brass for measurements, signal blue for actions, warm wood for the door. */
+/* Palette taken from the door itself: walnut number plate for actions, brass for measurements, neutral greys around it. */
 :root {
-  --bg: #edf1f5;
+  --bg: #f3f3f2;
   --surface: #ffffff;
-  --surface-2: #f5f7fa;
-  --fg: #14223a;
-  --muted: #5b6a80;
-  --line: #d3dbe5;
-  --accent: #2457c5;
+  --surface-2: #ecebe9;
+  --fg: #1f1d1a;
+  --muted: #6b665f;
+  --line: #dddad5;
+  --accent: #6e4f31;
   --accent-fg: #ffffff;
+  --select: #2f6fd6;
   --brass: #8a6634;
-  --warn: #b93a0b;
-  --warn-bg: #fdede4;
-  --ok: #17703f;
-  --checker: #e3e7ec;
+  --warn: #b23a0c;
+  --warn-bg: #fbece4;
+  --ok: #2c7a47;
+  --checker: #e4e2df;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #0e1622;
-    --surface: #152032;
-    --surface-2: #1b283c;
-    --fg: #e4eaf2;
-    --muted: #94a3b8;
-    --line: #2a3a52;
-    --accent: #7ea4ff;
-    --accent-fg: #0e1622;
+    --bg: #1b1a18;
+    --surface: #242220;
+    --surface-2: #2e2b28;
+    --fg: #ece8e2;
+    --muted: #a39d94;
+    --line: #3a3733;
+    --accent: #d2a968;
+    --accent-fg: #1b1a18;
+    --select: #7ea4ff;
     --brass: #d2a968;
-    --warn: #fb923c;
-    --warn-bg: #3a1f12;
-    --ok: #4ade80;
-    --checker: #2a3546;
+    --warn: #f59a6a;
+    --warn-bg: #3a2218;
+    --ok: #74c58f;
+    --checker: #34312d;
     color-scheme: dark;
   }
 }
@@ -45,6 +47,7 @@
   --color-line: var(--line);
   --color-accent: var(--accent);
   --color-accent-fg: var(--accent-fg);
+  --color-select: var(--select);
   --color-brass: var(--brass);
   --color-warn: var(--warn);
   --color-warn-bg: var(--warn-bg);
@@ -57,25 +60,27 @@
   html, body { background: var(--bg); color: var(--fg); }
   body { font-family: var(--font-sans); font-size: 14px; line-height: 1.55; }
   h1, h2, h3 { text-wrap: balance; }
-  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  :focus-visible { outline: 2px solid var(--select); outline-offset: 2px; }
 }
 
 @layer components {
   .btn {
-    @apply inline-flex items-center justify-center gap-1.5 rounded-md border border-line bg-surface-2 px-3 py-1.5 text-[13.5px] leading-tight text-fg cursor-pointer select-none;
+    @apply inline-flex items-center justify-center gap-1.5 rounded-md border border-line bg-surface px-3 py-1.5 text-[13.5px] leading-tight text-fg cursor-pointer select-none;
   }
-  .btn:hover:not(:disabled) { @apply border-accent; }
+  .btn:hover:not(:disabled) { @apply bg-surface-2; }
   .btn:disabled { @apply opacity-45 cursor-not-allowed; }
   .btn-primary { @apply bg-accent text-accent-fg border-accent font-medium; }
+  .btn-primary:hover:not(:disabled) { @apply bg-accent brightness-110; }
+  .btn-quiet { @apply border-transparent bg-transparent; }
   .btn-danger { @apply text-warn; }
+  .link { @apply cursor-pointer text-[12.5px] text-muted underline underline-offset-2 hover:text-fg; }
   .input {
-    @apply w-full min-w-0 rounded-md border border-line bg-surface-2 px-2 py-1 text-[13.5px] text-fg;
+    @apply w-full min-w-0 rounded-md border border-line bg-surface px-2 py-1 text-[13.5px] text-fg;
   }
-  .panel { @apply rounded-xl border border-line bg-surface p-4; }
   .label { @apply text-[13px] text-muted; }
-  .num { @apply font-mono text-[12.5px] tabular-nums; }
-  .note { @apply rounded-lg bg-surface-2 px-3 py-2.5 text-[12.5px] text-muted; }
-  .warnbox { @apply rounded-lg bg-warn-bg px-3 py-2 text-[12.5px] text-warn; }
+  .section-title { @apply text-[13px] font-semibold; }
+  .num { @apply tabular-nums; }
+  .warnbox { @apply rounded-md bg-warn-bg px-3 py-2 text-[12.5px] text-warn; }
   .checker {
     background-color: var(--surface-2);
     background-image: linear-gradient(45deg, var(--checker) 25%, transparent 25%, transparent 75%, var(--checker) 75%),

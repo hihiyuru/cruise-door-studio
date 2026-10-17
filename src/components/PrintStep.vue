@@ -11,6 +11,7 @@ import { buildPdfs } from '../export/pdf'
 import { doorPreviewPng } from '../export/doorPng'
 import { downloadBlob } from '../export/download'
 import SheetPreview from './SheetPreview.vue'
+import { Download } from 'lucide-vue-next'
 
 const project = useProject()
 const ui = useUi()
@@ -93,87 +94,76 @@ async function downloadDoor() {
 </script>
 
 <template>
-  <div class="grid grid-cols-1 items-start gap-4 lg:grid-cols-[360px_minmax(0,1fr)]">
-    <section class="panel flex flex-col gap-4" aria-label="印刷設定">
-      <fieldset class="flex flex-col gap-2">
-        <legend class="mb-2 text-[14px] font-semibold">在哪裡印？</legend>
-        <label v-for="pl in PLACES" :key="pl.id"
-          class="flex cursor-pointer items-start gap-2.5 rounded-lg border px-3 py-2"
-          :class="pr.place === pl.id ? 'border-accent bg-accent/8' : 'border-line hover:border-accent/60'">
-          <input type="radio" name="place" class="mt-1" :checked="pr.place === pl.id" @change="setPlace(pl.id)" />
-          <span><span class="block text-[13.5px] font-medium">{{ pl.label }}</span><span class="text-[12px] text-muted">{{ pl.hint }}</span></span>
-        </label>
-      </fieldset>
+  <div class="grid grid-cols-1 items-start gap-8 lg:grid-cols-[340px_minmax(0,1fr)]">
+    <section class="flex flex-col gap-5" aria-label="印刷設定">
+      <div class="flex flex-col gap-2" role="radiogroup" aria-labelledby="place-label">
+        <h2 id="place-label" class="section-title">在哪裡印</h2>
+        <div class="grid grid-cols-3 gap-1 rounded-md bg-surface-2 p-1">
+          <button v-for="pl in PLACES" :key="pl.id" type="button" role="radio" :aria-checked="pr.place === pl.id"
+            class="rounded px-2 py-1.5 text-[13px]"
+            :class="pr.place === pl.id ? 'bg-surface font-medium shadow-sm' : 'text-muted hover:text-fg'"
+            @click="setPlace(pl.id)">{{ pl.short }}</button>
+        </div>
+        <p class="text-[12.5px] text-muted">{{ PLACES.find(p => p.id === pr.place)!.hint }}</p>
+      </div>
 
       <label class="flex flex-col gap-1.5">
-        <span class="text-[14px] font-semibold">紙張</span>
+        <span class="section-title">紙張</span>
         <select class="input" :value="pr.paperId" @change="pr.paperId = ($event.target as HTMLSelectElement).value; project.commit()">
           <option v-for="p in papers" :key="p.id" :value="p.id">{{ p.label }}</option>
           <option v-if="pr.place === 'shop'" :value="CUSTOM_PAPER_ID">自訂尺寸…</option>
         </select>
       </label>
-      <div v-if="pr.place === 'shop' && pr.paperId === CUSTOM_PAPER_ID" class="flex gap-3">
-        <label class="flex items-center gap-1"><span class="label">寬</span><input class="input w-20" type="number" :value="pr.custom.w" @change="setCustom('w', ($event.target as HTMLInputElement).value)" /><span class="num">mm</span></label>
-        <label class="flex items-center gap-1"><span class="label">高</span><input class="input w-20" type="number" :value="pr.custom.h" @change="setCustom('h', ($event.target as HTMLInputElement).value)" /><span class="num">mm</span></label>
+      <div v-if="pr.place === 'shop' && pr.paperId === CUSTOM_PAPER_ID" class="grid grid-cols-2 gap-3">
+        <label class="flex flex-col gap-1"><span class="label">寬（mm）</span><input class="input num" type="number" :value="pr.custom.w" @change="setCustom('w', ($event.target as HTMLInputElement).value)" /></label>
+        <label class="flex flex-col gap-1"><span class="label">高（mm）</span><input class="input num" type="number" :value="pr.custom.h" @change="setCustom('h', ($event.target as HTMLInputElement).value)" /></label>
       </div>
 
-      <div class="rounded-lg border border-line p-3">
-        <p class="text-[14px]">
-          <template v-if="sheets.length">共 <b class="num text-[15px]">{{ sheets.length }}</b> 張 {{ short }}<template v-if="cost">，約 <b class="num text-[15px]">{{ cost }}</b> 元</template></template>
-          <template v-else>門上還沒有可以印的貼紙。</template>
+      <div class="flex flex-col gap-2 border-t border-line pt-4">
+        <p v-if="sheets.length" class="text-[15px]">
+          共 <b class="num">{{ sheets.length }}</b> 張 {{ short }}<template v-if="cost">，約 <b class="num">{{ cost }}</b> 元</template>
         </p>
-        <p v-if="cost" class="mt-0.5 text-[12px] text-muted">以 ibon 彩色每張 {{ project.paper.price }} 元估算，實際以門市機台顯示為準。</p>
-        <p v-for="sp in layout.split" :key="sp.key" class="mt-1 text-[12.5px] text-muted">「{{ sp.sticker.name }}」切成 {{ sp.tile!.n }} 塊（{{ sp.tile!.label }}-1～{{ sp.tile!.label }}-{{ sp.tile!.n }}），拼的時候後一塊壓在前一塊上，重疊 1 公分對齊再黏。</p>
-        <button type="button" class="btn btn-primary mt-3 w-full !py-2.5 !text-[14.5px]" :disabled="!sheets.length || !!busy" @click="downloadPdf">
-          {{ busy ?? '下載印刷 PDF' }}
+        <p v-else class="text-[13px] text-muted">門上還沒有可以印的貼紙。</p>
+        <button type="button" class="btn btn-primary w-full !py-2.5 !text-[14.5px]" :disabled="!sheets.length || !!busy" @click="downloadPdf">
+          <Download v-if="!busy" :size="17" aria-hidden="true" />{{ busy ?? '下載 PDF' }}
         </button>
-        <p v-if="pr.place === 'ibon'" class="mt-1.5 text-[12px] text-muted">ibon 單檔有大小限制，檔案太大時會自動拆成幾個 PDF。</p>
+        <p v-if="pr.place === 'ibon'" class="text-[12.5px] text-muted">先印 1 張，量紙張底部的 5 公分比例尺，對了再印剩下的。檔案太大時會自動拆成幾個 PDF。</p>
+        <p v-else-if="pr.place === 'shop'" class="text-[12.5px] text-muted">350 dpi、RGB。請店家照實際大小印，需要 CMYK 請店家代轉。</p>
+        <p v-else class="text-[12.5px] text-muted">列印時選「實際大小」或「100%」，不要選「符合頁面」。</p>
       </div>
+
+      <p v-for="sp in layout.split" :key="sp.key" class="text-[12.5px] text-muted">
+        「{{ sp.sticker.name }}」切成 {{ sp.tile!.n }} 塊（{{ sp.tile!.label }}-1～{{ sp.tile!.label }}-{{ sp.tile!.n }}），後一塊壓在前一塊上，重疊 1 公分對齊再黏。
+      </p>
 
       <div v-if="layout.tooBig.length" class="warnbox flex flex-col gap-2">
-        <p>下面這些比 {{ short }} 能印的範圍大，現在不會被印出來：</p>
+        <p>這些比 {{ short }} 能印的範圍大，現在不會印出來：</p>
         <div v-for="p in layout.tooBig" :key="p.key" class="flex flex-wrap items-center gap-2">
           <b class="mr-auto">{{ p.sticker.name }}</b>
           <button v-if="widthToFit(p.sticker, usable.w, usable.h)" type="button" class="btn !py-1" @click="shrink(p.sticker.id, widthToFit(p.sticker, usable.w, usable.h)!)">縮到 {{ cm(widthToFit(p.sticker, usable.w, usable.h)!) }} cm</button>
           <button type="button" class="btn !py-1" @click="split(p.sticker.id)">切成幾塊</button>
         </div>
       </div>
-      <div v-if="blurry.length" class="warnbox">
-        「{{ blurry.map(s => s.name).join('、') }}」原圖解析度不夠，印這麼大會糊（不到 150 dpi）。縮小一點，或換更大張的原圖、向量 SVG。
-      </div>
-
-      <div class="note flex flex-col gap-1.5">
-        <template v-if="pr.place === 'ibon'">
-          <p><b>到 ibon 印的時候：</b>紙張選 A3（或 A4）、彩色。這份 PDF 的頁面就是 ibon 能印的範圍，印出來是實際大小。</p>
-          <p>先印 <b>1 張</b>，量底部的 5 公分比例尺，對了再印剩下的。</p>
-          <p>用 PDF 原檔就好，不用轉 CMYK。</p>
-        </template>
-        <template v-else-if="pr.place === 'shop'">
-          <p>PDF 是 350 dpi、RGB 色彩。印刷店通常要 CMYK，請店家代轉，顏色可能會比螢幕暗一點。</p>
-          <p>紙張邊界至少 6 mm，涵蓋常見的 2～3 mm 出血。請店家照實際大小印，不要縮放。</p>
-        </template>
-        <template v-else>
-          <p>列印時選<b>「實際大小」或「100%」</b>，不要選「符合頁面」。印好量底部的 5 公分比例尺確認。</p>
-        </template>
-      </div>
+      <p v-if="blurry.length" class="warnbox">
+        「{{ blurry.map(s => s.name).join('、') }}」解析度不夠，印這麼大會糊。縮小一點，或換更大張的原圖、SVG。
+      </p>
 
       <details class="text-[13px]">
-        <summary class="cursor-pointer text-muted">進階：紙張邊界與間距</summary>
-        <div class="mt-2 flex flex-wrap gap-4">
-          <label class="flex items-center gap-1.5"><span class="label">紙張邊界</span><input class="input w-16" type="number" min="6" max="25" :value="pr.margin" @change="setNum('margin', ($event.target as HTMLInputElement).value, 6, 25)" /><span class="num">mm</span></label>
-          <label class="flex items-center gap-1.5"><span class="label">貼紙間距</span><input class="input w-16" type="number" min="0" max="20" :value="pr.gap" @change="setNum('gap', ($event.target as HTMLInputElement).value, 0, 20)" /><span class="num">mm</span></label>
+        <summary class="cursor-pointer text-muted">紙張邊界與間距</summary>
+        <div class="mt-2 grid grid-cols-2 gap-3">
+          <label class="flex flex-col gap-1"><span class="label">邊界（mm）</span><input class="input num" type="number" min="6" max="25" :value="pr.margin" @change="setNum('margin', ($event.target as HTMLInputElement).value, 6, 25)" /></label>
+          <label class="flex flex-col gap-1"><span class="label">間距（mm）</span><input class="input num" type="number" min="0" max="20" :value="pr.gap" @change="setNum('gap', ($event.target as HTMLInputElement).value, 0, 20)" /></label>
         </div>
       </details>
 
-      <button type="button" class="btn self-start" @click="downloadDoor">下載門的預覽圖（PNG）</button>
+      <button type="button" class="link self-start" @click="downloadDoor">下載整扇門的預覽圖</button>
     </section>
 
-    <section class="panel min-w-0" aria-label="每一張的預覽">
-      <h2 class="mb-3 text-[14px] font-semibold">每一張的預覽</h2>
-      <p v-if="!sheets.length" class="text-[13px] text-muted">回到「① 排在門上」加入圖片後，這裡會顯示排好的紙張。</p>
-      <div class="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-3">
+    <section class="min-w-0" aria-label="每一張的預覽">
+      <p v-if="!sheets.length" class="text-[13px] text-muted">回到門上加入圖片後，這裡會顯示排好的紙張。</p>
+      <div class="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-4">
         <SheetPreview v-for="(sh, i) in sheets" :key="i" :sheet="sh" :paper="project.paper" :margin="pr.margin" :index="i"
-          :label="`${short} 第 ${i + 1} 張・${sh.length} 塊`" />
+          :label="`第 ${i + 1} 張`" />
       </div>
     </section>
   </div>

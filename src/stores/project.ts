@@ -3,8 +3,9 @@ import { computed, reactive, ref, toRaw } from 'vue'
 import type { ProjectState, Sticker } from '../domain/types'
 import { ADVENTURE, doorFor } from '../domain/doors'
 import { paperFor } from '../domain/papers'
+import { bbox, hits, outer } from '../domain/geometry'
 import { loadProject, saveProject, type StoredAsset } from '../storage/idb'
-import { assets, addAsset, addCanvasAsset, clearAssets, restoreAssets } from './assets'
+import { assets, addAsset, addCanvasAsset, restoreAssets } from './assets'
 import { sampleArt } from '../render/samples'
 
 const HISTORY_LIMIT = 50
@@ -117,14 +118,11 @@ export const useProject = defineStore('project', () => {
     scheduleSave()
   }
 
+  /** Open a project file. The previous layout stays one undo step away. */
   async function replaceAll(project: ProjectState, list: StoredAsset[]) {
-    clearAssets()
     await restoreAssets(list)
     Object.assign(p, { ...defaultProject(), ...project })
-    past.value = []
-    future.value = []
-    last = snap()
-    scheduleSave()
+    commit()
   }
 
   /* ---------- stickers ---------- */
@@ -138,28 +136,39 @@ export const useProject = defineStore('project', () => {
     }
   }
 
-  /** Add uploaded files, laid out in a grid on the lower part of the door so they do not pile up. */
+  /** First free spot (scanning the lower half of the door) where `s` overlaps no other sticker and no keep-out zone. */
+  function freeSpot(s: Sticker, others: Sticker[]): { x: number; y: number } | null {
+    const d = door.value
+    const o = outer(s)
+    const GAP = 8
+    const boxes = others.map(bbox)
+    for (let y = d.h * 0.5 + o.h / 2; y <= d.h - o.h / 2 - 10; y += 10) {
+      for (let x = o.w / 2 + 15; x <= d.w - o.w / 2 - 15; x += 10) {
+        const c = { ...s, x, y }
+        if (hits(c, d.keepOut, d).length) continue
+        const b = bbox(c)
+        if (boxes.some(r => b.x < r.x + r.w + GAP && b.x + b.w + GAP > r.x && b.y < r.y + r.h + GAP && b.y + b.h + GAP > r.y)) continue
+        return { x, y }
+      }
+    }
+    return null
+  }
+
+  /** Add uploaded files, each placed in a free spot on the lower half of the door. */
   async function addFiles(files: File[], isSvg: (f: File) => boolean): Promise<{ added: Sticker[]; failed: string[] }> {
     const added: Sticker[] = []
     const failed: string[] = []
     const d = door.value
     const w = files.length > 12 ? 80 : 100
-    const cols = Math.max(1, Math.floor((d.w - 40) / (w + 15)))
-    const startY = d.h * 0.58
-    const taken = p.stickers.filter(s => !s.sample).length
     for (const f of files) {
       try {
         const a = await addAsset(f, isSvg(f))
-        const n = taken + added.length
-        const col = n % cols
-        const row = Math.floor(n / cols)
-        const ar = a.art.height / a.art.width
-        added.push({
-          id: uid(), name: f.name.replace(/\.[^.]+$/, '') || '貼上的圖片', assetId: a.id, origAssetId: a.id, ar, w,
-          x: 20 + (w + 15) * (col + 0.5),
-          y: Math.min(d.h - 60, startY + (row % 6) * (w * Math.min(ar, 1.3) + 20) + 60),
-          rot: 0, border: 2, cut: false, tile: false,
-        })
+        const s: Sticker = {
+          id: uid(), name: f.name.replace(/\.[^.]+$/, '') || '貼上的圖片', assetId: a.id, origAssetId: a.id,
+          ar: a.art.height / a.art.width, w, x: d.w / 2, y: d.h * 0.75, rot: 0, border: 2, cut: false, tile: false,
+        }
+        Object.assign(s, freeSpot(s, [...p.stickers, ...added]) ?? { x: d.w / 2 + (added.length % 5) * 15, y: d.h * 0.75 + (added.length % 5) * 15 })
+        added.push(s)
       } catch {
         failed.push(f.name)
       }

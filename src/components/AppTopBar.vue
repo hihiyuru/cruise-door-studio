@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { ArrowLeft, ChevronDown, Printer, Redo2, Undo2 } from 'lucide-vue-next'
 import { useProject } from '../stores/project'
 import { useUi } from '../stores/ui'
 import { assets } from '../stores/assets'
@@ -11,29 +12,37 @@ const project = useProject()
 const ui = useUi()
 const { layout } = useLayout()
 const fileInput = ref<HTMLInputElement>()
+const menuOpen = ref(false)
+const menu = ref<HTMLElement>()
 
 const status = computed(() => {
   switch (project.saveStatus) {
-    case 'loading': return '讀取中…'
+    case 'loading': return ''
     case 'saving': return '儲存中…'
-    case 'error': return '沒辦法存在這個瀏覽器，請匯出專案檔備份'
+    case 'error': return '沒辦法存在這個瀏覽器，請備份專案檔'
     default: {
       const t = project.savedAt
-      return t ? `已自動儲存在這台電腦・${t.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })}` : '已自動儲存在這台電腦'
+      return t ? `已自動儲存 ${t.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false })}` : '已自動儲存'
     }
   }
 })
 
 const sheetCount = computed(() => layout.value.sheets.length)
 
-async function onExport() {
+async function backup() {
+  menuOpen.value = false
   const used = new Set(project.p.stickers.flatMap(s => [s.assetId, s.origAssetId]))
   const blob = await exportProject(JSON.parse(JSON.stringify(project.p)), [...assets.values()].filter(a => used.has(a.id)))
   downloadBlob(blob, `艙門裝飾專案-${stamp()}.json`)
-  ui.notify('已匯出專案檔，換電腦時用「匯入專案」打開')
+  ui.notify('已下載專案檔。換電腦時用「開啟專案檔」接著做')
 }
 
-async function onImport(e: Event) {
+function openFile() {
+  menuOpen.value = false
+  fileInput.value?.click()
+}
+
+async function onOpen(e: Event) {
   const input = e.target as HTMLInputElement
   const f = input.files?.[0]
   input.value = ''
@@ -42,7 +51,8 @@ async function onImport(e: Event) {
     const { project: p, assets: list } = await importProject(f)
     await project.replaceAll(p, list)
     ui.selected = null
-    ui.notify(`已匯入 ${p.stickers.length} 張貼紙`)
+    ui.step = 'arrange'
+    ui.notify(`已開啟專案，共 ${p.stickers.length} 張貼紙`)
   } catch (err) {
     ui.notify(err instanceof ProjectFileError ? err.message : '讀不到這個專案檔，檔案可能損壞了')
   }
@@ -50,34 +60,43 @@ async function onImport(e: Event) {
 
 function undo() { if (project.undo() && ui.selected && !project.byId(ui.selected)) ui.selected = null }
 function redo() { if (project.redo() && ui.selected && !project.byId(ui.selected)) ui.selected = null }
+
+function onDocClick(e: MouseEvent) { if (menuOpen.value && !menu.value?.contains(e.target as Node)) menuOpen.value = false }
+onMounted(() => document.addEventListener('click', onDocClick))
+onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
 </script>
 
 <template>
-  <header class="mx-auto flex max-w-[1500px] flex-wrap items-center gap-x-5 gap-y-2">
-    <h1 class="text-[20px] font-extrabold tracking-tight">郵輪艙門裝飾工作台</h1>
+  <header class="mx-auto flex max-w-[1500px] flex-wrap items-center gap-x-3 gap-y-2 border-b border-line pb-3">
+    <button v-if="ui.step === 'print'" type="button" class="btn btn-quiet -ml-2 !px-2" @click="ui.step = 'arrange'">
+      <ArrowLeft :size="16" aria-hidden="true" />回到門上
+    </button>
+    <h1 class="mr-auto text-[17px] font-bold">郵輪艙門裝飾工作台</h1>
 
-    <nav class="flex rounded-lg border border-line bg-surface p-0.5" aria-label="步驟">
-      <button
-        v-for="s in ([['arrange', '① 排在門上'], ['print', '② 印出來']] as const)" :key="s[0]" type="button"
-        class="rounded-md px-3 py-1.5 text-[13.5px]"
-        :class="ui.step === s[0] ? 'bg-accent text-accent-fg font-medium' : 'text-fg hover:bg-surface-2'"
-        :aria-current="ui.step === s[0] ? 'step' : undefined"
-        @click="ui.step = s[0]"
-      >
-        {{ s[1] }}<span v-if="s[0] === 'print' && sheetCount" class="num ml-1 opacity-80">（{{ sheetCount }} 張）</span>
+    <span class="text-[12.5px]" :class="project.saveStatus === 'error' ? 'text-warn' : 'text-muted'" aria-live="polite">{{ status }}</span>
+
+    <div class="flex items-center">
+      <button type="button" class="btn btn-quiet !px-2" :disabled="!project.canUndo" title="復原（⌘Z）" aria-label="復原" @click="undo"><Undo2 :size="17" /></button>
+      <button type="button" class="btn btn-quiet !px-2" :disabled="!project.canRedo" title="重做（⇧⌘Z）" aria-label="重做" @click="redo"><Redo2 :size="17" /></button>
+    </div>
+
+    <div ref="menu" class="relative">
+      <button type="button" class="btn" :aria-expanded="menuOpen" aria-haspopup="menu" @click="menuOpen = !menuOpen">
+        專案<ChevronDown :size="15" aria-hidden="true" />
       </button>
-    </nav>
-
-    <div class="flex flex-wrap items-center gap-2">
-      <button type="button" class="btn" :disabled="!project.canUndo" title="⌘Z" @click="undo">↶ 復原</button>
-      <button type="button" class="btn" :disabled="!project.canRedo" title="⇧⌘Z" @click="redo">↷ 重做</button>
+      <div v-if="menuOpen" role="menu" class="absolute right-0 z-30 mt-1 w-56 rounded-md border border-line bg-surface p-1 shadow-lg">
+        <button type="button" role="menuitem" class="block w-full rounded px-3 py-2 text-left hover:bg-surface-2" @click="backup">
+          備份專案檔<span class="block text-[12px] text-muted">下載 .json，換電腦時用</span>
+        </button>
+        <button type="button" role="menuitem" class="block w-full rounded px-3 py-2 text-left hover:bg-surface-2" @click="openFile">
+          開啟專案檔<span class="block text-[12px] text-muted">取代目前的排版，可以按復原回來</span>
+        </button>
+      </div>
+      <input ref="fileInput" type="file" accept=".json,application/json" class="hidden" @change="onOpen" />
     </div>
 
-    <div class="ml-auto flex flex-wrap items-center gap-2">
-      <span class="text-[12.5px]" :class="project.saveStatus === 'error' ? 'text-warn' : 'text-muted'">{{ status }}</span>
-      <button type="button" class="btn" @click="onExport">匯出專案</button>
-      <button type="button" class="btn" @click="fileInput?.click()">匯入專案</button>
-      <input ref="fileInput" type="file" accept=".json,application/json" class="hidden" @change="onImport" />
-    </div>
+    <button v-if="ui.step === 'arrange'" type="button" class="btn btn-primary" @click="ui.step = 'print'; ui.selected = null">
+      <Printer :size="16" aria-hidden="true" />列印／下載 PDF<span v-if="sheetCount" class="num opacity-85">（{{ sheetCount }} 張）</span>
+    </button>
   </header>
 </template>

@@ -35,13 +35,13 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
 <template>
   <div class="min-h-dvh px-4 pb-10 pt-3">
     <AppTopBar />
-    <main class="mx-auto mt-3 max-w-[1500px]">
+    <main class="mx-auto mt-5 max-w-[1500px]">
       <p v-if="!ready" class="py-20 text-center text-muted">正在讀取上次的排版…</p>
       <ArrangeStep v-else-if="ui.step === 'arrange'" />
       <PrintStep v-else />
     </main>
-    <footer class="mx-auto mt-8 max-w-[1500px] text-[12px] text-muted">
-      非迪士尼官方工具。圖片只存在你自己的瀏覽器裡，不會上傳到任何地方。迪士尼郵輪艙門是金屬門，請用磁鐵固定裝飾。
+    <footer class="mx-auto mt-10 max-w-[1500px] border-t border-line pt-3 text-[12px] text-muted">
+      非迪士尼官方工具・圖片只存在你的瀏覽器，不會上傳・艙門是金屬門，裝飾請用磁鐵固定
     </footer>
     <BgEditorModal />
     <AppToast />

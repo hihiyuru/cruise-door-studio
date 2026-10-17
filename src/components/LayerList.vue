@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { ImagePlus, TriangleAlert } from 'lucide-vue-next'
 import { useProject } from '../stores/project'
 import { useUi } from '../stores/ui'
 import { hits } from '../domain/geometry'
@@ -52,34 +53,30 @@ function clearAll() {
 </script>
 
 <template>
-  <section class="panel flex min-w-0 flex-col gap-3" aria-label="貼紙清單">
-    <div
-      class="flex flex-col items-center gap-2 rounded-lg border-[1.5px] border-dashed p-3 text-center"
-      :class="over ? 'border-accent bg-surface-2' : 'border-line'"
-      @dragover.prevent="over = true" @dragleave="over = false" @drop.prevent.stop="over = false; add($event.dataTransfer?.files)"
-    >
-      <button type="button" class="btn btn-primary" @click="fileInput?.click()">加入圖片…</button>
-      <input ref="fileInput" type="file" accept="image/*,.svg" multiple class="hidden" @change="onPick" />
-      <span class="text-[12px] text-muted">PNG、JPG、SVG 都可以。也能直接拖進來，或複製圖片後按 ⌘V 貼上。</span>
+  <section
+    class="flex min-w-0 flex-col gap-3 rounded-md"
+    :class="over ? 'bg-surface-2 outline-2 outline-dashed outline-select' : ''"
+    aria-label="貼紙清單"
+    @dragover.prevent="over = true" @dragleave.self="over = false" @drop.prevent.stop="over = false; add($event.dataTransfer?.files)"
+  >
+    <button type="button" class="btn btn-primary w-full !py-2" @click="fileInput?.click()">
+      <ImagePlus :size="17" aria-hidden="true" />加入圖片
+    </button>
+    <input ref="fileInput" type="file" accept="image/*,.svg" multiple class="hidden" @change="onPick" />
+    <p class="-mt-1 text-[12px] text-muted">PNG、JPG、SVG。也可以拖進來或貼上。</p>
+
+    <div class="mt-2 flex items-baseline justify-between">
+      <h2 class="section-title">貼紙 <span class="num font-normal text-muted">{{ project.p.stickers.length }}</span></h2>
+      <button v-if="hasSamples" type="button" class="link" @click="clearSamples">清掉範例</button>
     </div>
 
-    <div v-if="hasSamples" class="note">
-      門上現在是<b>範例貼紙</b>，可以先拖拖看。
-      <button type="button" class="btn mt-2 w-full" @click="clearSamples">清掉範例</button>
-    </div>
-
-    <div class="flex items-baseline justify-between">
-      <h2 class="text-[14px] font-semibold">貼紙 <span class="num text-muted">{{ project.p.stickers.length }}</span></h2>
-      <span class="text-[12px] text-muted">上面的在最上層</span>
-    </div>
-
-    <p v-if="!rows.length" class="text-[13px] text-muted">門上還沒有貼紙。按「加入圖片…」開始。</p>
-    <ul v-else class="-mx-1 flex max-h-[52vh] flex-col gap-0.5 overflow-y-auto">
+    <p v-if="!rows.length" class="text-[13px] text-muted">門上還沒有貼紙。</p>
+    <ul v-else class="-mx-1 flex max-h-[58vh] flex-col overflow-y-auto">
       <li v-for="s in rows" :key="s.id">
         <button
           type="button"
-          class="flex w-full items-center gap-2.5 rounded-md px-1 py-1 text-left"
-          :class="ui.selected === s.id ? 'bg-accent/12 ring-1 ring-accent' : 'hover:bg-surface-2'"
+          class="flex w-full items-center gap-2.5 rounded-md px-1.5 py-1.5 text-left"
+          :class="ui.selected === s.id ? 'bg-surface-2 ring-1 ring-select' : 'hover:bg-surface-2'"
           :aria-pressed="ui.selected === s.id"
           @click="ui.selected = s.id"
         >
@@ -88,14 +85,14 @@ function clearAll() {
           </span>
           <span class="min-w-0 flex-1">
             <span class="block truncate text-[13px]">{{ s.name }}</span>
-            <span class="num text-muted">{{ (s.w / 10).toFixed(1) }} cm 寬</span>
+            <span class="num text-[12px] text-muted">寬 {{ (s.w / 10).toFixed(1) }} cm</span>
           </span>
-          <span v-if="problems(s.id).length" class="shrink-0 text-[12px] text-warn" :title="`蓋到${problems(s.id).join('、')}`">⚠ {{ problems(s.id).includes('門外') ? '門外' : '禁貼區' }}</span>
+          <TriangleAlert v-if="problems(s.id).length" :size="15" class="shrink-0 text-warn" :aria-label="`蓋到${problems(s.id).join('、')}`" />
         </button>
       </li>
     </ul>
 
-    <button v-if="rows.length" type="button" class="btn btn-danger mt-1 self-start" @click="clearAll">
+    <button v-if="rows.length" type="button" class="link self-start !text-warn" @click="clearAll">
       {{ confirming ? `再按一次，刪掉全部 ${project.p.stickers.length} 張` : '清空全部貼紙' }}
     </button>
   </section>

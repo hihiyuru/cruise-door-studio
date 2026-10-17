@@ -51,11 +51,6 @@ export async function restoreAssets(list: StoredAsset[]) {
   await Promise.all(list.map(a => addAsset(a.blob, a.isSvg, a.id).catch(() => null)))
 }
 
-export function clearAssets() {
-  assets.clear()
-  assetsVersion.value++
-}
-
 /** Re-render a vector asset so its trimmed width is `targetPx`, for printing. */
 export async function svgAtWidth(a: Asset, targetPx: number): Promise<Canvas> {
   const url = URL.createObjectURL(a.blob)

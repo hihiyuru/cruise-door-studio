@@ -5,6 +5,7 @@ import { useAddFiles } from '../composables/useFiles'
 import LayerList from './LayerList.vue'
 import DoorStage from './DoorStage.vue'
 import InspectorPanel from './InspectorPanel.vue'
+import DoorSettings from './DoorSettings.vue'
 
 const ui = useUi()
 const add = useAddFiles()
@@ -33,15 +34,16 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="grid grid-cols-1 items-start gap-4 lg:grid-cols-[260px_minmax(0,1fr)_300px] md:grid-cols-[minmax(0,1fr)_300px]">
-    <LayerList class="order-2 md:order-none md:col-start-2 md:row-start-1 lg:col-start-1" />
-    <DoorStage class="order-1 md:order-none md:col-start-1 md:row-span-2 md:row-start-1 lg:col-start-2" />
-    <!-- on phones the settings slide up from the bottom once a sticker is selected -->
-    <InspectorPanel
-      class="md:static md:col-start-2 md:row-start-2 md:max-h-none md:shadow-none lg:col-start-3 lg:row-start-1"
-      :class="ui.selected
-        ? 'fixed inset-x-0 bottom-0 z-40 max-h-[48vh] overflow-y-auto rounded-b-none pb-[calc(16px+env(safe-area-inset-bottom,0px))] shadow-[0_-8px_30px_rgba(0,0,0,.18)]'
-        : 'max-md:order-3'"
-    />
+  <div class="grid grid-cols-1 items-start gap-6 md:grid-cols-[minmax(0,1fr)_280px] lg:grid-cols-[240px_minmax(0,1fr)_280px]">
+    <LayerList class="order-2 md:col-start-2 md:row-start-1 lg:order-none lg:col-start-1 lg:border-r lg:border-line lg:pr-5" />
+    <DoorStage class="order-1 md:col-start-1 md:row-span-2 md:row-start-1 lg:order-none lg:col-start-2" />
+    <div class="order-3 md:col-start-2 md:row-start-2 lg:order-none lg:col-start-3 lg:row-start-1 lg:border-l lg:border-line lg:pl-5">
+      <DoorSettings v-if="!ui.selected" />
+      <!-- on phones the sticker settings slide up from the bottom -->
+      <InspectorPanel
+        v-else
+        class="max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:z-40 max-md:max-h-[50vh] max-md:overflow-y-auto max-md:rounded-t-xl max-md:border-t max-md:border-line max-md:bg-surface max-md:p-4 max-md:pb-[calc(16px+env(safe-area-inset-bottom,0px))] max-md:shadow-[0_-8px_30px_rgba(0,0,0,.18)]"
+      />
+    </div>
   </div>
 </template>

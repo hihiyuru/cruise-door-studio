@@ -1,10 +1,9 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useProject } from '../stores/project'
 import { useUi } from '../stores/ui'
 import { outer, hits } from '../domain/geometry'
 import { doorSvg } from '../render/doorSvg'
-import { DOOR_OPTIONS, CUSTOM_DOOR_ID } from '../domain/doors'
 import StickerCanvas from './StickerCanvas.vue'
 import type { Sticker } from '../domain/types'
 
@@ -24,6 +23,7 @@ onMounted(() => {
   ro.observe(doorEl.value!)
 })
 onBeforeUnmount(() => ro?.disconnect())
+watch(() => [door.value.w, door.value.h], () => requestAnimationFrame(() => { scale.value = (doorEl.value?.clientWidth ?? 0) / door.value.w || 1 }))
 
 function boxStyle(s: Sticker) {
   const o = outer(s)
@@ -107,47 +107,14 @@ function onKey(e: KeyboardEvent, s: Sticker) {
   }
 }
 
-function onDoorChange(e: Event) {
-  project.p.doorId = (e.target as HTMLSelectElement).value
-  project.commit()
-  requestAnimationFrame(() => { scale.value = (doorEl.value?.clientWidth ?? 0) / door.value.w || 1 })
-}
-const clampDoor = (v: number) => Math.max(300, Math.min(3000, Math.round(v || 0)))
 </script>
 
 <template>
-  <section class="panel flex min-w-0 flex-col items-center gap-3" aria-label="艙門">
-    <div class="flex w-full flex-wrap items-center justify-center gap-x-4 gap-y-2">
-      <label class="flex min-w-0 max-w-full items-center gap-2">
-        <span class="label shrink-0">門款</span>
-        <select class="input w-auto min-w-0 max-w-full" :value="project.p.doorId" @change="onDoorChange">
-          <option v-for="d in DOOR_OPTIONS" :key="d.id" :value="d.id">{{ d.label }}</option>
-        </select>
-      </label>
-      <template v-if="project.p.doorId === CUSTOM_DOOR_ID">
-        <label class="flex items-center gap-1"><span class="label">寬</span>
-          <input class="input w-20" type="number" min="300" max="3000" :value="project.p.customDoor.w"
-            @change="project.p.customDoor.w = clampDoor(+($event.target as HTMLInputElement).value); project.commit()" /><span class="num">mm</span></label>
-        <label class="flex items-center gap-1"><span class="label">高</span>
-          <input class="input w-20" type="number" min="300" max="3000" :value="project.p.customDoor.h"
-            @change="project.p.customDoor.h = clampDoor(+($event.target as HTMLInputElement).value); project.commit()" /><span class="num">mm</span></label>
-      </template>
-      <label v-if="door.fixtures" class="flex items-center gap-2">
-        <span class="label">門牌號碼</span>
-        <input class="input w-20" maxlength="6" :value="project.p.roomNo" @change="project.p.roomNo = ($event.target as HTMLInputElement).value; project.commit()" />
-      </label>
-      <label v-if="door.keepOut.length" class="flex items-center gap-1.5 text-[13px]">
-        <input v-model="project.p.view.keepOut" type="checkbox" @change="project.commit()" /> 顯示不能貼的區域
-      </label>
-      <label class="flex items-center gap-1.5 text-[13px]">
-        <input v-model="project.p.view.grid" type="checkbox" @change="project.commit()" /> 10 公分格線
-      </label>
-    </div>
-
+  <section class="flex min-w-0 flex-col items-center gap-3 py-2" aria-label="艙門">
     <div class="grid max-w-full grid-cols-[auto_auto] gap-x-2 gap-y-1">
       <span />
-      <div class="num flex items-center gap-1.5 text-brass before:h-px before:min-w-3 before:flex-1 before:bg-current before:opacity-60 after:h-px after:min-w-3 after:flex-1 after:bg-current after:opacity-60">{{ door.w / 10 }} cm</div>
-      <div class="num flex items-center gap-1.5 self-stretch text-brass [writing-mode:vertical-rl] before:w-px before:min-h-3 before:flex-1 before:bg-current before:opacity-60 after:w-px after:min-h-3 after:flex-1 after:bg-current after:opacity-60">{{ door.h / 10 }} cm</div>
+      <div class="num flex items-center gap-1.5 text-[12px] text-brass before:h-px before:min-w-3 before:flex-1 before:bg-current before:opacity-60 after:h-px after:min-w-3 after:flex-1 after:bg-current after:opacity-60">{{ door.w / 10 }} cm</div>
+      <div class="num flex items-center gap-1.5 self-stretch text-[12px] text-brass [writing-mode:vertical-rl] before:w-px before:min-h-3 before:flex-1 before:bg-current before:opacity-60 after:w-px after:min-h-3 after:flex-1 after:bg-current after:opacity-60">{{ door.h / 10 }} cm</div>
       <div
         ref="doorEl"
         class="relative select-none rounded-sm shadow-[0_1px_0_#9c8566,0_10px_30px_rgba(20,34,58,.18)]"
@@ -156,11 +123,11 @@ const clampDoor = (v: number) => Math.max(300, Math.min(3000, Math.round(v || 0)
         @pointermove="onMove" @pointerup="onUp" @pointercancel="onUp"
       >
         <svg class="pointer-events-none absolute inset-0 h-full w-full" :viewBox="`0 0 ${door.w} ${door.h}`" aria-hidden="true" v-html="svg" />
-        <div v-show="snapping" class="pointer-events-none absolute inset-y-0 left-1/2 border-l border-dashed border-accent" />
+        <div v-show="snapping" class="pointer-events-none absolute inset-y-0 left-1/2 border-l border-dashed border-select" />
         <div
           v-for="s in project.p.stickers" :key="s.id"
           class="sticker absolute cursor-grab touch-none outline-offset-2"
-          :class="[ui.selected === s.id ? 'outline-[1.5px] outline-accent' : '', problems(s).length ? 'outline-dashed outline-[1.5px] outline-warn' : '']"
+          :class="[ui.selected === s.id ? 'outline-[1.5px] outline-select' : '', problems(s).length ? 'outline-dashed outline-[1.5px] outline-warn' : '']"
           :style="boxStyle(s)"
           tabindex="0"
           role="button"
@@ -174,12 +141,11 @@ const clampDoor = (v: number) => Math.max(300, Math.min(3000, Math.round(v || 0)
           <template v-if="ui.selected === s.id">
             <span class="handle -right-[11px] -bottom-[11px] cursor-nwse-resize" title="拖曳縮放" @pointerdown="onDown($event, s, 'resize')" />
             <span class="handle -top-[34px] left-1/2 -ml-2 cursor-grab" title="拖曳旋轉" @pointerdown="onDown($event, s, 'rotate')" />
-            <span class="pointer-events-none absolute -top-[18px] left-1/2 h-[18px] w-0.5 -translate-x-1/2 bg-accent" />
+            <span class="pointer-events-none absolute -top-[18px] left-1/2 h-[18px] w-0.5 -translate-x-1/2 bg-select" />
           </template>
         </div>
       </div>
     </div>
-    <p class="text-center text-[12.5px] text-muted">{{ door.note }}</p>
   </section>
 </template>
 
@@ -187,7 +153,7 @@ const clampDoor = (v: number) => Math.max(300, Math.min(3000, Math.round(v || 0)
 @reference "../style.css";
 /* 16px dot, 44px touch target */
 .handle {
-  @apply absolute z-10 h-4 w-4 touch-none rounded-full border-2 border-accent bg-surface;
+  @apply absolute z-10 h-4 w-4 touch-none rounded-full border-2 border-select bg-surface;
 }
 .handle::before {
   content: "";

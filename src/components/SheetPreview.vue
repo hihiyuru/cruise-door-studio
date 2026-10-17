@@ -46,7 +46,7 @@ watch(() => [props.sheet, props.paper, props.margin, assetsVersion.value], draw,
 
 <template>
   <figure class="m-0 flex flex-col gap-1">
-    <canvas ref="el" class="h-auto w-full rounded-sm border border-line bg-white shadow-[0_2px_8px_rgba(20,34,58,.1)]" :aria-label="label" role="img" />
-    <figcaption class="num text-muted">{{ label }}</figcaption>
+    <canvas ref="el" class="h-auto w-full rounded-sm bg-white shadow-[0_1px_3px_rgba(0,0,0,.12)]" :aria-label="label" role="img" />
+    <figcaption class="text-[12px] text-muted">{{ label }}</figcaption>
   </figure>
 </template>
