@@ -55,6 +55,11 @@ function shrinkToFit() {
   project.commit()
 }
 
+function onTile() {
+  project.commit()
+  if (s.value?.tile && !layout.value.split.some(p => p.sticker.id === s.value!.id)) ui.fail('紙張太小，無法分張印。')
+}
+
 function remove() {
   if (!s.value) return
   const removed = project.remove(s.value.id)
@@ -122,7 +127,7 @@ async function onReplace(e: Event) {
       <template v-if="'fitW' in status && status.fitW">
         <button type="button" class="btn" @click="shrinkToFit">縮到 {{ cm(status.fitW) }} cm</button>
         <label class="flex items-center gap-2">
-          <input v-model="s.tile" type="checkbox" @change="project.commit()" />分成幾張印，自己拼</label>
+          <input v-model="s.tile" type="checkbox" @change="onTile" />分成幾張印，自己拼</label>
       </template>
     </div>
 
