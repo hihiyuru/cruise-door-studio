@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { Check, TriangleAlert, X } from 'lucide-vue-next'
+import { Check, Pencil, TriangleAlert, X } from 'lucide-vue-next'
 import { useProject } from '../stores/project'
 import { useUi } from '../stores/ui'
 import { assets, assetsVersion, isSvgFile } from '../stores/assets'
@@ -30,7 +30,8 @@ const placement = computed(() => {
   if (zone) return `擋到${ZONE_NAMES[zone] ?? zone}了，挪開一點。`
   if (hit.length) return '超出門外了。'
   const a = assets.get(st.assetId)
-  if (a && !a.isSvg && dpiOf(a.art.width, st.w) < 150) return '圖太小，印出來會糊。'
+  // the examples are only for trying things out, so they never nag about sharpness
+  if (a && !a.isSvg && !st.sample && dpiOf(a.art.width, st.w) < 150) return '圖太小，印出來會糊。'
   return null
 })
 
@@ -43,6 +44,18 @@ const printFit = computed(() => {
   const split = layout.value.split.find(p => p.sticker.id === st.id)
   return { ok: false, text: split ? `${paperLabel.value} 印不下，會分成 ${split.tile!.n} 張印。` : `${paperLabel.value} 印不下。`, fitW }
 })
+
+/** Rotation slider: settle on upright and quarter turns when close, since those are what people aim for. */
+function setRot(v: number) {
+  if (!s.value) return
+  for (const t of [-180, -90, 0, 90, 180]) if (Math.abs(v - t) <= 3) v = t
+  s.value.rot = v
+}
+function straighten() {
+  if (!s.value) return
+  s.value.rot = 0
+  project.commit()
+}
 
 function setWidthCm(v: string) {
   const n = parseFloat(v)
@@ -92,7 +105,8 @@ async function onReplace(e: Event) {
   <section v-if="s" class="flex min-w-0 flex-col gap-3.5" aria-label="貼紙設定">
     <div class="flex items-center gap-2">
       <input class="input !border-transparent !bg-transparent !px-0 text-[15px] font-semibold hover:!border-line focus:!border-line focus:!px-2"
-        :value="s.name" aria-label="名稱" @change="s.name = ($event.target as HTMLInputElement).value; project.commit()" />
+        :value="s.name" aria-label="名稱" title="點一下可以改名稱" @change="s.name = ($event.target as HTMLInputElement).value; project.commit()" />
+      <Pencil :size="14" class="shrink-0 text-muted" aria-hidden="true" />
       <button type="button" class="btn btn-quiet shrink-0 !px-1.5" aria-label="取消選取" @click="ui.selected = null"><X :size="17" /></button>
     </div>
 
@@ -107,8 +121,9 @@ async function onReplace(e: Event) {
       <label class="label" for="ins-rot">旋轉</label>
       <div class="flex items-center gap-2">
         <input id="ins-rot" type="range" min="-180" max="180" step="1" class="flex-1 accent-accent" :value="Math.round(s.rot)"
-          @input="s.rot = +($event.target as HTMLInputElement).value" @change="project.commit()" />
+          @input="setRot(+($event.target as HTMLInputElement).value)" @change="project.commit()" />
         <span class="num w-10 text-right text-[12.5px]">{{ Math.round(s.rot) }}°</span>
+        <button v-if="Math.round(s.rot) !== 0" type="button" class="link shrink-0" @click="straighten">轉正</button>
       </div>
 
       <label class="label" for="ins-border">白邊</label>

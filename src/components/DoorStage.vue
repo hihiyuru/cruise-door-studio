@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { Copy, Eraser, MoveDiagonal2, RotateCw, Trash2 } from 'lucide-vue-next'
 import { useProject } from '../stores/project'
 import { useUi } from '../stores/ui'
-import { outer, hits } from '../domain/geometry'
+import { bbox, outer, hits } from '../domain/geometry'
 import { doorSvg } from '../render/doorSvg'
 import StickerCanvas from './StickerCanvas.vue'
 import type { Sticker } from '../domain/types'
@@ -12,6 +13,42 @@ const ui = useUi()
 const doorEl = ref<HTMLDivElement>()
 const scale = ref(1)
 const snapping = ref(false)
+const dragging = ref(false)
+const selected = computed(() => project.byId(ui.selected))
+
+/* The handles can point anywhere once a sticker is rotated, so the toolbar keeps this much clear of its bounds. */
+const HANDLE_CLEAR = 46
+const TOOLBAR_H = 38
+/** Floating toolbar above the selected sticker, or below it when there is no room above. */
+const toolbarStyle = computed(() => {
+  const s = selected.value
+  if (!s) return {}
+  const b = bbox(s)
+  const k = scale.value
+  const above = b.y * k - HANDLE_CLEAR - TOOLBAR_H
+  return { left: `${(b.x + b.w / 2) * k}px`, top: `${above > 4 ? above : (b.y + b.h) * k + HANDLE_CLEAR}px` }
+})
+
+function removeSelected() {
+  const s = selected.value
+  if (!s) return
+  const removed = project.remove(s.id)
+  ui.selected = null
+  if (removed) ui.notify(`已刪除「${removed.name}」。`, { action: { label: '復原', run: () => project.undo() } })
+}
+function duplicateSelected() {
+  const s = selected.value
+  const n = s && project.duplicate(s.id, false)
+  if (n) ui.selected = n.id
+}
+
+/* On phones the settings sheet covers the lower half; bring the chosen sticker into view above it. */
+watch(() => ui.selected, async id => {
+  if (!id || !matchMedia('(max-width: 767px)').matches) return
+  await nextTick()
+  const el = doorEl.value?.querySelector<HTMLElement>(`[data-sid="${id}"]`)
+  if (el && el.getBoundingClientRect().bottom > innerHeight * 0.45) el.scrollIntoView({ block: 'start', behavior: 'smooth' })
+})
 
 const door = computed(() => project.door)
 const svg = computed(() => doorSvg(door.value, { keepOut: project.p.view.keepOut, grid: project.p.view.grid, roomNo: project.p.roomNo }))
@@ -55,6 +92,7 @@ function onDown(e: PointerEvent, s: Sticker, mode: Drag['mode']) {
     mode, s, px: p.x, py: p.y, x0: s.x, y0: s.y, w0: s.w,
     d0: Math.hypot(p.x - s.x, p.y - s.y) || 1, a0: Math.atan2(p.y - s.y, p.x - s.x), r0: s.rot,
   }
+  dragging.value = true
   ;(e.currentTarget as Element).setPointerCapture(e.pointerId)
   e.preventDefault()
   e.stopPropagation()
@@ -84,6 +122,7 @@ function onMove(e: PointerEvent) {
 function onUp() {
   if (!drag) return
   drag = null
+  dragging.value = false
   snapping.value = false
   project.commit()
 }
@@ -99,9 +138,7 @@ function onKey(e: KeyboardEvent, s: Sticker) {
     e.preventDefault()
   } else if (e.key === 'Delete' || e.key === 'Backspace') {
     e.preventDefault()
-    const removed = project.remove(s.id)
-    ui.selected = null
-    if (removed) ui.notify(`已刪除「${removed.name}」。`, { action: { label: '復原', run: () => project.undo() } })
+    removeSelected()
   } else if (e.key === 'Escape') {
     ui.selected = null
   }
@@ -127,7 +164,11 @@ function onKey(e: KeyboardEvent, s: Sticker) {
         <div
           v-for="s in project.p.stickers" :key="s.id"
           class="sticker absolute cursor-grab touch-none outline-offset-2"
-          :class="[ui.selected === s.id ? 'outline-[1.5px] outline-select' : '', problems(s).length ? 'outline-dashed outline-[1.5px] outline-warn' : '']"
+          :class="[
+            ui.selected === s.id ? 'outline-[1.5px] outline-select' : ui.hovered === s.id ? 'outline-2 outline-select/70' : '',
+            problems(s).length ? 'outline-dashed outline-[1.5px] outline-warn' : '',
+          ]"
+          :data-sid="s.id"
           :style="boxStyle(s)"
           tabindex="0"
           role="button"
@@ -139,10 +180,23 @@ function onKey(e: KeyboardEvent, s: Sticker) {
         >
           <StickerCanvas :sticker="s" class="pointer-events-none drop-shadow-[0_1px_1.5px_rgba(0,0,0,.25)]" />
           <template v-if="ui.selected === s.id">
-            <span class="handle -right-[11px] -bottom-[11px] cursor-nwse-resize" title="拖曳縮放" @pointerdown="onDown($event, s, 'resize')" />
-            <span class="handle -top-[34px] left-1/2 -ml-2 cursor-grab" title="拖曳旋轉" @pointerdown="onDown($event, s, 'rotate')" />
+            <span class="handle -right-[13px] -bottom-[13px] cursor-nwse-resize" title="拖曳縮放" @pointerdown="onDown($event, s, 'resize')"><MoveDiagonal2 :size="11" /></span>
+            <span class="handle -top-[38px] left-1/2 -ml-[10px] cursor-grab" title="拖曳旋轉" @pointerdown="onDown($event, s, 'rotate')"><RotateCw :size="11" /></span>
             <span class="pointer-events-none absolute -top-[18px] left-1/2 h-[18px] w-0.5 -translate-x-1/2 bg-select" />
           </template>
+        </div>
+
+        <div
+          v-if="selected && !dragging"
+          class="absolute z-20 flex -translate-x-1/2 items-center gap-0.5 whitespace-nowrap rounded-lg border border-line bg-surface p-1 shadow-lg"
+          :style="toolbarStyle"
+          role="toolbar"
+          aria-label="貼紙工具"
+          @pointerdown.stop
+        >
+          <button type="button" class="tool" title="去背" @click="ui.editing = selected.id"><Eraser :size="15" aria-hidden="true" />去背</button>
+          <button type="button" class="tool" title="複製一張" @click="duplicateSelected"><Copy :size="15" aria-hidden="true" />複製</button>
+          <button type="button" class="tool text-warn" title="刪除（Delete 鍵）" @click="removeSelected"><Trash2 :size="15" aria-hidden="true" />刪除</button>
         </div>
       </div>
     </div>
@@ -151,9 +205,13 @@ function onKey(e: KeyboardEvent, s: Sticker) {
 
 <style scoped>
 @reference "../style.css";
-/* 16px dot, 44px touch target */
+/* 20px handle with an icon, 48px touch target */
 .handle {
-  @apply absolute z-10 h-4 w-4 touch-none rounded-full border-2 border-select bg-surface;
+  @apply absolute z-10 grid h-5 w-5 touch-none place-items-center rounded-full border-2 border-select bg-surface text-select;
+}
+.handle > svg { pointer-events: none; }
+.tool {
+  @apply inline-flex items-center gap-1 rounded-md px-2 py-1 text-[13px] hover:bg-surface-2;
 }
 .handle::before {
   content: "";

@@ -81,6 +81,8 @@ function clearAll() {
           :class="ui.selected === s.id ? 'bg-surface-2 ring-1 ring-select' : 'hover:bg-surface-2'"
           :aria-pressed="ui.selected === s.id"
           @click="ui.selected = s.id"
+          @mouseenter="ui.hovered = s.id"
+          @mouseleave="ui.hovered = null"
         >
           <span class="checker grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded">
             <StickerCanvas :sticker="s" class="!h-auto max-h-9 !w-auto max-w-9" />
