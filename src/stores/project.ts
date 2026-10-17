@@ -253,6 +253,15 @@ export const useProject = defineStore('project', () => {
     return n
   }
 
+  /** Nudge a sticker (keyboard arrows); one undo step per press. */
+  function moveBy(id: string, dx: number, dy: number) {
+    const s = byId(id)
+    if (!s) return
+    s.x += dx
+    s.y += dy
+    commit()
+  }
+
   function reorder(id: string, to: number) {
     const i = state.stickers.findIndex(s => s.id === id)
     if (i < 0) return
@@ -264,6 +273,6 @@ export const useProject = defineStore('project', () => {
   return {
     state, door, paper, byId, saveStatus, savedAt, keepThisTab,
     layout, usable, head, commit, undo, redo, canUndo, canRedo,
-    load, restoreSamples, replaceAll, addFiles, replaceArt, remove, duplicate, reorder,
+    load, restoreSamples, replaceAll, addFiles, replaceArt, remove, duplicate, moveBy, reorder,
   }
 })

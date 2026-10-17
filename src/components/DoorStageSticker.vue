@@ -59,9 +59,7 @@ function onKey(e: KeyboardEvent) {
   const arrow = ARROWS[e.key]
   if (arrow) {
     const step = e.shiftKey ? NUDGE_SHIFT_MM : NUDGE_MM
-    props.sticker.x += arrow[0] * step
-    props.sticker.y += arrow[1] * step
-    project.commit()
+    project.moveBy(props.sticker.id, arrow[0] * step, arrow[1] * step)
     e.preventDefault()
   } else if (e.key === 'Delete' || e.key === 'Backspace') {
     e.preventDefault()
