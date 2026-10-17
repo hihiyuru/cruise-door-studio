@@ -6,6 +6,7 @@ import { paperFor } from '../domain/papers'
 import { layoutSheets } from '../domain/packing'
 import { freeSpot } from '../domain/placement'
 import { fileBaseName, newId } from '../domain/format'
+import { sanitizeProject } from '../domain/projectSchema'
 import { currentRev, loadProject, saveProject, SaveConflict, type StoredAsset } from '../storage/idb'
 import { assets, addAsset, addCanvasAsset, restoreAssets } from './assets'
 import { sampleArt } from '../render/samples'
@@ -149,7 +150,7 @@ export const useProject = defineStore('project', () => {
       if (stored) {
         rev = stored.rev
         await restoreAssets(stored.assets)
-        const project = { ...defaultProject(), ...stored.project }
+        const project = sanitizeProject(stored.project, defaultProject())
         const missing = project.stickers.filter(s => !assets.has(s.assetId))
         project.stickers = project.stickers.filter(s => assets.has(s.assetId))
         // missing examples are simply redrawn; only the user's own pictures count as lost
@@ -178,9 +179,9 @@ export const useProject = defineStore('project', () => {
   }
 
   /** Open a backup. The previous layout stays one undo step away. Returns how many pictures could not be read. */
-  async function replaceAll(project: ProjectState, list: StoredAsset[]): Promise<{ lost: number }> {
+  async function replaceAll(project: unknown, list: StoredAsset[]): Promise<{ lost: number }> {
     await restoreAssets(list)
-    const next = { ...defaultProject(), ...project }
+    const next = sanitizeProject(project, defaultProject())
     const before = next.stickers.length
     next.stickers = next.stickers.filter(s => assets.has(s.assetId))
     Object.assign(state, next)

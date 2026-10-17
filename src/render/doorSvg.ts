@@ -4,7 +4,9 @@ const esc = (s: string) => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;
 
 /** Inner SVG markup of a door in millimetre units (viewBox 0 0 door.w door.h). Uses only literal colours so it also renders as an image. */
 export function doorSvg(door: DoorModel, opts: { keepOut: boolean; grid: boolean; roomNo: string }): string {
-  const { w, h } = door
+  // this markup goes through v-html; force numbers so a stray string can never become markup
+  const w = Number(door.w) || 0
+  const h = Number(door.h) || 0
   let s = `<defs>
     <linearGradient id="wood" x1="0" x2="1"><stop offset="0" stop-color="#D2BC9C"/><stop offset=".5" stop-color="#DCC8AA"/><stop offset="1" stop-color="#D2BC9C"/></linearGradient>
     <pattern id="grain" width="40" height="${h}" patternUnits="userSpaceOnUse"><path d="M6 0V${h}M19 0V${h}M31 0V${h}" stroke="rgba(120,90,50,.07)" stroke-width="2"/></pattern>
@@ -35,4 +37,4 @@ export function doorSvg(door: DoorModel, opts: { keepOut: boolean; grid: boolean
 }
 
 export const doorSvgDocument = (door: DoorModel, opts: { keepOut: boolean; grid: boolean; roomNo: string }, pxW: number, pxH: number) =>
-  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${door.w} ${door.h}" width="${pxW}" height="${pxH}">${doorSvg(door, opts)}</svg>`
+  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${Number(door.w) || 0} ${Number(door.h) || 0}" width="${Number(pxW) || 0}" height="${Number(pxH) || 0}">${doorSvg(door, opts)}</svg>`

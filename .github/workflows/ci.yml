@@ -5,10 +5,9 @@ on:
   push:
     branches: [main]
 
+# least privilege: everything reads only; just the deploy job may publish to Pages
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
   group: pages-${{ github.ref }}
@@ -35,6 +34,9 @@ jobs:
     if: github.event_name == 'push'
     needs: check
     runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
