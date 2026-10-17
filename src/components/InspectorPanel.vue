@@ -20,25 +20,28 @@ const cm = (mm: number) => (mm / 10).toFixed(1).replace(/\.0$/, '')
 const ZONE_NAMES: Record<string, string> = { 門牌: '門牌', 貓眼: '貓眼', 門鎖和門把: '門把' }
 const paperLabel = computed(() => paperName(project.paper))
 
-/** The one thing worth saying about this sticker, most important first: in the way > blurry > won't fit. */
-const status = computed(() => {
+/** Where it sits: in the way > off the door > too blurry. Only the most important one is shown. */
+const placement = computed(() => {
   void assetsVersion.value
   const st = s.value
   if (!st) return null
   const hit = hits(st, project.door.keepOut, project.door)
   const zone = hit.find(h => h !== '門外')
-  if (zone) return { tone: 'warn' as const, text: `擋到${ZONE_NAMES[zone] ?? zone}了，挪開一點。` }
-  if (hit.length) return { tone: 'warn' as const, text: '超出門外了。' }
+  if (zone) return `擋到${ZONE_NAMES[zone] ?? zone}了，挪開一點。`
+  if (hit.length) return '超出門外了。'
   const a = assets.get(st.assetId)
-  if (a && !a.isSvg && dpiOf(a.art.width, st.w) < 150) return { tone: 'warn' as const, text: '圖太小，印出來會糊。' }
+  if (a && !a.isSvg && dpiOf(a.art.width, st.w) < 150) return '圖太小，印出來會糊。'
+  return null
+})
+
+/** Whether it prints on one sheet. Shown alongside a placement warning, because its fixes are buttons right here. */
+const printFit = computed(() => {
+  const st = s.value
+  if (!st) return null
   const fitW = widthToFit(st, usable.value.w, usable.value.h)
-  if (fitW === null) return { tone: 'ok' as const, text: `${paperLabel.value} 一張印得完。` }
+  if (fitW === null) return { ok: true, text: `${paperLabel.value} 一張印得完。`, fitW: null }
   const split = layout.value.split.find(p => p.sticker.id === st.id)
-  return {
-    tone: 'warn' as const,
-    text: split ? `${paperLabel.value} 印不下，會分成 ${split.tile!.n} 張印。` : `${paperLabel.value} 印不下。`,
-    fitW,
-  }
+  return { ok: false, text: split ? `${paperLabel.value} 印不下，會分成 ${split.tile!.n} 張印。` : `${paperLabel.value} 印不下。`, fitW }
 })
 
 function setWidthCm(v: string) {
@@ -48,7 +51,7 @@ function setWidthCm(v: string) {
   project.commit()
 }
 function shrinkToFit() {
-  const fitW = status.value && 'fitW' in status.value ? status.value.fitW : null
+  const fitW = printFit.value?.fitW
   if (!s.value || !fitW) return
   s.value.w = fitW
   s.value.tile = false
@@ -119,13 +122,16 @@ async function onReplace(e: Event) {
     <label class="flex items-center gap-2 text-[13px]">
       <input v-model="s.cut" type="checkbox" @change="project.commit()" />外圍加灰色裁切線</label>
 
-    <div v-if="status" class="flex flex-col gap-2 border-t border-line pt-3 text-[13px]">
-      <p class="flex items-center gap-1.5" :class="status.tone === 'ok' ? 'text-muted' : 'text-warn'">
-        <Check v-if="status.tone === 'ok'" :size="15" class="shrink-0 text-ok" aria-hidden="true" />
-        <TriangleAlert v-else :size="15" class="shrink-0" aria-hidden="true" />{{ status.text }}
+    <div v-if="placement || printFit" class="flex flex-col gap-2 border-t border-line pt-3 text-[13px]">
+      <p v-if="placement" class="flex items-center gap-1.5 text-warn">
+        <TriangleAlert :size="15" class="shrink-0" aria-hidden="true" />{{ placement }}
       </p>
-      <template v-if="'fitW' in status && status.fitW">
-        <button type="button" class="btn" @click="shrinkToFit">縮到 {{ cm(status.fitW) }} cm</button>
+      <p v-if="printFit && (!printFit.ok || !placement)" class="flex items-center gap-1.5" :class="printFit.ok ? 'text-muted' : 'text-warn'">
+        <Check v-if="printFit.ok" :size="15" class="shrink-0 text-ok" aria-hidden="true" />
+        <TriangleAlert v-else :size="15" class="shrink-0" aria-hidden="true" />{{ printFit.text }}
+      </p>
+      <template v-if="printFit?.fitW">
+        <button type="button" class="btn" @click="shrinkToFit">縮到 {{ cm(printFit.fitW) }} cm</button>
         <label class="flex items-center gap-2">
           <input v-model="s.tile" type="checkbox" @change="onTile" />分成幾張印，自己拼</label>
       </template>
