@@ -92,6 +92,30 @@ describe('tilesFor', () => {
   })
 })
 
+describe('tilesFor in both directions', () => {
+  it('splits a sticker too wide and too tall for one sheet into a grid that covers it exactly', () => {
+    const big = st('big', 700, 0.72, { tile: true }) // about 70 × 50 cm
+    const [UW, UH] = usable(IBON_A3, 8)
+    const pieces = tilesFor(big, UW, UH, 'A')!
+    expect(pieces.length).toBeGreaterThanOrEqual(4)
+    const o = outer(big)
+    const right = Math.max(...pieces.map(p => p.crop!.x + p.crop!.w))
+    const bottom = Math.max(...pieces.map(p => p.crop!.y + p.crop!.h))
+    expect(right).toBeCloseTo(o.w, 6)
+    expect(bottom).toBeCloseTo(o.h, 6)
+    for (const p of pieces) expect((p.w <= UW && p.h <= UH) || (p.h <= UW && p.w <= UH)).toBe(true)
+    expect(pieces.map(p => p.tile!.i)).toEqual(pieces.map((_, k) => k + 1))
+  })
+
+  it('gets placed on sheets instead of being reported as too big', () => {
+    const big = st('big', 700, 0.72, { tile: true })
+    const { tooBig, sheets, split } = layoutSheets([big], IBON_A3, 8, 4)
+    expect(tooBig).toEqual([])
+    expect(split).toHaveLength(1)
+    expect(sheets.flat().length).toBe(split[0].tile!.n)
+  })
+})
+
 describe('widthToFit', () => {
   it('suggests a width that makes the sticker fit on one sheet', () => {
     const mickey = st('mickey', 330, 1.15)

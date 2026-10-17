@@ -55,6 +55,9 @@ function split(id: string) {
   if (!s) return
   s.tile = true
   project.commit()
+  const first = layout.value.split.find(p => p.sticker.id === id)
+  if (first) ui.notify(`已分成 ${first.tile!.n} 張印。`, { action: { label: '復原', run: () => project.undo() } })
+  else ui.fail('紙張太小，無法分張印。')
 }
 
 /* ---------- output ---------- */

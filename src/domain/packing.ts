@@ -35,27 +35,41 @@ export interface Layout {
   split: Piece[]
 }
 
-/** Split an oversized sticker into strips that each fit usableW × usableH. Null when even a strip cannot fit. */
+/** How many pieces of at most `max` (sharing OVERLAP) cover `len`, and how long each piece is. */
+function cut(len: number, max: number): { n: number; seg: number } | null {
+  if (len <= max) return { n: 1, seg: len }
+  if (max <= OVERLAP * 2) return null
+  const n = Math.ceil((len - OVERLAP) / (max - OVERLAP))
+  return { n, seg: (len + (n - 1) * OVERLAP) / n }
+}
+
+/**
+ * Split an oversized sticker into a grid of pieces that each fit usableW × usableH,
+ * neighbours sharing OVERLAP mm for gluing. Pieces are numbered row by row.
+ * Null when the paper is too small to split onto at all.
+ */
 export function tilesFor(s: Sticker, usableW: number, usableH: number, label: string): Piece[] | null {
   const o = outer(s)
-  const opts: { axis: 'x' | 'y'; n: number; seg: number }[] = []
-  for (const axis of ['x', 'y'] as const) {
-    const L = axis === 'x' ? o.w : o.h
-    const other = axis === 'x' ? o.h : o.w
-    // a strip may be laid either way round, so try both sheet edges as the strip length
-    for (const [maxL, maxO] of [[usableW, usableH], [usableH, usableW]]) {
-      if (other > maxO || maxL <= OVERLAP * 2) continue
-      const n = Math.max(2, Math.ceil((L - OVERLAP) / (maxL - OVERLAP)))
-      opts.push({ axis, n, seg: (L + (n - 1) * OVERLAP) / n })
+  let best: { cols: { n: number; seg: number }; rows: { n: number; seg: number } } | null = null
+  // a piece may lie either way round on the sheet, so try both orientations of the cell
+  for (const [cw, ch] of [[usableW, usableH], [usableH, usableW]]) {
+    const cols = cut(o.w, cw)
+    const rows = cut(o.h, ch)
+    if (!cols || !rows || cols.n * rows.n < 2) continue
+    if (!best || cols.n * rows.n < best.cols.n * best.rows.n) best = { cols, rows }
+  }
+  if (!best) return null
+  const { cols, rows } = best
+  const n = cols.n * rows.n
+  const pieces: Piece[] = []
+  for (let r = 0; r < rows.n; r++) {
+    for (let c = 0; c < cols.n; c++) {
+      const crop = { x: c * (cols.seg - OVERLAP), y: r * (rows.seg - OVERLAP), w: cols.seg, h: rows.seg }
+      const i = pieces.length + 1
+      pieces.push({ key: `${s.id}#${i}`, sticker: s, w: crop.w, h: crop.h, crop, tile: { i, n, label } })
     }
   }
-  if (!opts.length) return null
-  const b = opts.sort((a, c) => a.n - c.n)[0]
-  return Array.from({ length: b.n }, (_, k) => {
-    const start = k * (b.seg - OVERLAP)
-    const crop = b.axis === 'x' ? { x: start, y: 0, w: b.seg, h: o.h } : { x: 0, y: start, w: o.w, h: b.seg }
-    return { key: `${s.id}#${k + 1}`, sticker: s, w: crop.w, h: crop.h, crop, tile: { i: k + 1, n: b.n, label } }
-  })
+  return pieces
 }
 
 /* ---------- MaxRects bin packing (best short side fit) ---------- */
