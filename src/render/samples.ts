@@ -40,7 +40,7 @@ export function sampleArt(): { name: string; art: Canvas; w: number; x: number; 
   f.beginPath(); f.moveTo(0, 150); f.quadraticCurveTo(350, 110, 700, 175); f.lineTo(700, 195); f.quadraticCurveTo(350, 140, 0, 200); f.fill()
 
   return [
-    { name: '範例：圓章', art: badge, w: 120, x: 365, y: 1350, rot: 0 },
+    { name: '範例：圓章', art: badge, w: 120, x: 355, y: 1350, rot: 0 },
     { name: '範例：星星', art: star, w: 110, x: 170, y: 700, rot: -12 },
     { name: '範例：旗子', art: flag, w: 130, x: 560, y: 140, rot: 8 },
   ]

@@ -25,13 +25,13 @@ export function doorSvg(door: DoorModel, opts: { keepOut: boolean; grid: boolean
     }
   }
   if (door.fixtures) {
-    s += `<circle cx="365" cy="259.5" r="102.5" fill="#7E5D3D"/><circle cx="365" cy="259.5" r="92" fill="none" stroke="#B89466" stroke-width="3"/>
-    <text x="365" y="276" font-size="46" font-weight="700" text-anchor="middle" fill="#EAD9BC" font-family="Helvetica, Arial, sans-serif">${esc(opts.roomNo.slice(0, 6))}</text>
-    <circle cx="365" cy="562" r="10" fill="#C4C7CC" stroke="#555" stroke-width="3"/><circle cx="365" cy="562" r="4" fill="#333"/>
-    <rect x="618" y="790" width="84" height="55" rx="7" fill="#2E2E2E"/><rect x="630" y="802" width="22" height="8" rx="2" fill="#555"/>
-    <circle cx="670" cy="959" r="30" fill="#C4C7CC" stroke="#8A8F96" stroke-width="2"/>
-    <rect x="566" y="946" width="122" height="26" rx="13" fill="#D3D6DA" stroke="#8A8F96" stroke-width="2"/>
-    <circle cx="650" cy="1058" r="18" fill="#C4C7CC" stroke="#8A8F96" stroke-width="2"/>`
+    s += `<circle cx="355" cy="257.5" r="102.5" fill="#7E5D3D"/><circle cx="355" cy="257.5" r="92" fill="none" stroke="#B89466" stroke-width="3"/>
+    <text x="355" y="274" font-size="46" font-weight="700" text-anchor="middle" fill="#EAD9BC" font-family="Helvetica, Arial, sans-serif">${esc(opts.roomNo.slice(0, 6))}</text>
+    <circle cx="355" cy="560" r="10" fill="#C4C7CC" stroke="#555" stroke-width="3"/><circle cx="355" cy="560" r="4" fill="#333"/>
+    <rect x="598" y="790" width="84" height="55" rx="7" fill="#2E2E2E"/><rect x="610" y="802" width="22" height="8" rx="2" fill="#555"/>
+    <circle cx="650" cy="959" r="30" fill="#C4C7CC" stroke="#8A8F96" stroke-width="2"/>
+    <rect x="546" y="946" width="122" height="26" rx="13" fill="#D3D6DA" stroke="#8A8F96" stroke-width="2"/>
+    <circle cx="630" cy="1058" r="18" fill="#C4C7CC" stroke="#8A8F96" stroke-width="2"/>`
   }
   return s
 }
