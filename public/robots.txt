@@ -1,4 +1,0 @@
-User-agent: *
-Allow: /
-
-Sitemap: https://hihiyuru.github.io/cruise-door-studio/sitemap.xml
