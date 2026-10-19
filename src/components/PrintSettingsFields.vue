@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import { storeToRefs } from 'pinia'
 import { usePrintSettings } from '../composables/usePrintSettings'
 import { CUSTOM_PAPER_ID, PLACES } from '../domain/papers'
+import { useLocale } from '../stores/locale'
 
 /** Where to print and on what paper. Shared by the print step and the top-bar picker. */
 defineProps<{
@@ -8,7 +10,8 @@ defineProps<{
   compact?: boolean
 }>()
 
-const { pr, papers, place, isCustom, setPlace, setPaper, setCustom } = usePrintSettings()
+const { pr, papers, place, paperOption, isCustom, setPlace, setPaper, setCustom } = usePrintSettings()
+const { m } = storeToRefs(useLocale())
 
 function onPaperChange(e: Event) {
   setPaper((e.target as HTMLSelectElement).value)
@@ -26,29 +29,29 @@ function onCustomChange(key: 'w' | 'h', e: Event) {
     <div
       class="flex flex-col gap-2"
       role="radiogroup"
-      aria-label="在哪裡印"
+      :aria-label="m.printSettings.where"
     >
       <h2
         v-if="!compact"
         class="section-title"
       >
-        在哪裡印
+        {{ m.printSettings.where }}
       </h2>
       <div class="grid grid-cols-3 gap-1 rounded-md bg-surface-2 p-1">
         <button
           v-for="pl in PLACES"
-          :key="pl.id"
+          :key="pl"
           type="button"
           role="radio"
-          :aria-checked="pr.place === pl.id"
+          :aria-checked="pr.place === pl"
           class="rounded py-1.5"
           :class="[
             compact ? 'px-1 text-[12.5px]' : 'px-2 text-[13px]',
-            pr.place === pl.id ? 'bg-surface font-medium shadow-sm' : 'text-muted hover:text-fg',
+            pr.place === pl ? 'bg-surface font-medium shadow-sm' : 'text-muted hover:text-fg',
           ]"
-          @click="setPlace(pl.id)"
+          @click="setPlace(pl)"
         >
-          {{ pl.label }}
+          {{ m.places[pl].label }}
         </button>
       </div>
       <p
@@ -60,7 +63,7 @@ function onCustomChange(key: 'w' | 'h', e: Event) {
     </div>
 
     <label class="flex flex-col gap-1.5">
-      <span :class="compact ? 'label' : 'section-title'">紙張</span>
+      <span :class="compact ? 'label' : 'section-title'">{{ m.printSettings.paper }}</span>
       <select
         class="input"
         :value="pr.paperId"
@@ -71,13 +74,13 @@ function onCustomChange(key: 'w' | 'h', e: Event) {
           :key="p.id"
           :value="p.id"
         >
-          {{ p.label }}
+          {{ paperOption(p) }}
         </option>
         <option
           v-if="pr.place === 'shop'"
           :value="CUSTOM_PAPER_ID"
         >
-          自訂尺寸…
+          {{ m.paper.customOption }}
         </option>
       </select>
     </label>
@@ -87,7 +90,7 @@ function onCustomChange(key: 'w' | 'h', e: Event) {
       class="grid grid-cols-2 gap-3"
     >
       <label class="flex flex-col gap-1">
-        <span class="label">寬（mm）</span>
+        <span class="label">{{ m.printSettings.widthMm }}</span>
         <input
           class="input num"
           type="number"
@@ -96,7 +99,7 @@ function onCustomChange(key: 'w' | 'h', e: Event) {
         >
       </label>
       <label class="flex flex-col gap-1">
-        <span class="label">高（mm）</span>
+        <span class="label">{{ m.printSettings.heightMm }}</span>
         <input
           class="input num"
           type="number"

@@ -1,7 +1,9 @@
 <script setup lang="ts">
+import { storeToRefs } from 'pinia'
 import { computed } from 'vue'
 import { Copy, Eraser, Trash2 } from 'lucide-vue-next'
 import { useUi } from '../stores/ui'
+import { useLocale } from '../stores/locale'
 import { useStickerActions } from '../composables/useStickerActions'
 import { bbox } from '../domain/geometry'
 import type { Sticker } from '../domain/types'
@@ -14,6 +16,7 @@ const props = defineProps<{
 }>()
 
 const ui = useUi()
+const { m } = storeToRefs(useLocale())
 const { remove, duplicate } = useStickerActions()
 
 /** Rotated stickers can point their handles anywhere, so the toolbar keeps this many pixels clear of the sticker. */
@@ -36,41 +39,41 @@ const position = computed(() => {
     class="absolute z-20 flex -translate-x-1/2 items-center gap-0.5 whitespace-nowrap rounded-lg border border-line bg-surface p-1 shadow-lg"
     :style="position"
     role="toolbar"
-    aria-label="貼紙工具"
+    :aria-label="m.toolbar.region"
     @pointerdown.stop
   >
     <button
       type="button"
       class="tool"
-      title="去背"
+      :title="m.toolbar.removeBackground"
       @click="ui.editing = sticker.id"
     >
       <Eraser
         :size="15"
         aria-hidden="true"
-      />去背
+      />{{ m.toolbar.removeBackground }}
     </button>
     <button
       type="button"
       class="tool"
-      title="複製一張"
+      :title="m.toolbar.duplicateTitle"
       @click="duplicate(sticker.id)"
     >
       <Copy
         :size="15"
         aria-hidden="true"
-      />複製
+      />{{ m.toolbar.duplicate }}
     </button>
     <button
       type="button"
       class="tool text-warn"
-      title="刪除（Delete 鍵）"
+      :title="m.toolbar.deleteTitle"
       @click="remove(sticker.id)"
     >
       <Trash2
         :size="15"
         aria-hidden="true"
-      />刪除
+      />{{ m.toolbar.delete }}
     </button>
   </div>
 </template>

@@ -146,9 +146,9 @@ describe('widthToFit', () => {
 
 describe('hits', () => {
   it('flags stickers over the number plate and the lock', () => {
-    expect(hits(st('a', 100, 1, { x: 355, y: 258 }), ADVENTURE.keepOut, ADVENTURE)).toContain('門牌')
-    expect(hits(st('b', 100, 1, { x: 620, y: 950 }), ADVENTURE.keepOut, ADVENTURE)).toContain('門鎖和門把')
+    expect(hits(st('a', 100, 1, { x: 355, y: 258 }), ADVENTURE.keepOut, ADVENTURE)).toContain('roomNumber')
+    expect(hits(st('b', 100, 1, { x: 620, y: 950 }), ADVENTURE.keepOut, ADVENTURE)).toContain('lock')
     expect(hits(st('c', 100, 1, { x: 200, y: 1500 }), ADVENTURE.keepOut, ADVENTURE)).toEqual([])
-    expect(hits(st('d', 100, 1, { x: 10, y: 1500 }), ADVENTURE.keepOut, ADVENTURE)).toEqual(['門外'])
+    expect(hits(st('d', 100, 1, { x: 10, y: 1500 }), ADVENTURE.keepOut, ADVENTURE)).toEqual(['outside'])
   })
 })

@@ -1,12 +1,15 @@
 <script setup lang="ts">
+import { storeToRefs } from 'pinia'
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { ChevronDown } from 'lucide-vue-next'
 import { useUi } from '../stores/ui'
+import { useLocale } from '../stores/locale'
 import { usePrintSettings } from '../composables/usePrintSettings'
 import PrintSettingsFields from './PrintSettingsFields.vue'
 
 /** The print setting the arrange screen already measures against, visible and changeable from the top bar. */
 const ui = useUi()
+const { m } = storeToRefs(useLocale())
 const { summary } = usePrintSettings()
 const root = ref<HTMLElement>()
 
@@ -28,10 +31,10 @@ onBeforeUnmount(() => { document.removeEventListener('click', onDocClick); docum
       class="btn btn-quiet"
       :aria-expanded="ui.specOpen"
       aria-haspopup="dialog"
-      title="列印地點與紙張"
+      :title="m.printSettings.pickerTitle"
       @click.stop="ui.specOpen = !ui.specOpen"
     >
-      <span class="text-muted">印在</span>{{ summary }}<ChevronDown
+      <span class="text-muted">{{ m.printSettings.printAt }}</span>{{ summary }}<ChevronDown
         :size="15"
         aria-hidden="true"
       />
@@ -39,7 +42,7 @@ onBeforeUnmount(() => { document.removeEventListener('click', onDocClick); docum
     <div
       v-if="ui.specOpen"
       role="dialog"
-      aria-label="列印地點與紙張"
+      :aria-label="m.printSettings.pickerTitle"
       class="absolute right-0 z-30 mt-1 w-72 rounded-md border border-line bg-surface p-3 shadow-lg"
     >
       <PrintSettingsFields compact />

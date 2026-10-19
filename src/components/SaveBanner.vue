@@ -1,11 +1,14 @@
 <script setup lang="ts">
+import { storeToRefs } from 'pinia'
 import { TriangleAlert } from 'lucide-vue-next'
 import { useProject } from '../stores/project'
 import { useBackup } from '../composables/useBackup'
+import { useLocale } from '../stores/locale'
 
 /** Saving problems can cost the whole layout, so they stay on screen instead of in a toast. */
 const project = useProject()
 const backup = useBackup()
+const { m } = storeToRefs(useLocale())
 const reload = () => location.reload()
 </script>
 
@@ -21,30 +24,30 @@ const reload = () => location.reload()
       aria-hidden="true"
     />
     <template v-if="project.saveStatus === 'error'">
-      <span class="mr-auto">無法自動儲存，關掉前先備份。</span>
+      <span class="mr-auto">{{ m.saveBanner.failed }}</span>
       <button
         type="button"
         class="btn"
         @click="backup"
       >
-        下載備份
+        {{ m.topBar.downloadBackup }}
       </button>
     </template>
     <template v-else>
-      <span class="mr-auto">另一個分頁改過排版，這裡的修改暫停儲存。</span>
+      <span class="mr-auto">{{ m.saveBanner.conflict }}</span>
       <button
         type="button"
         class="btn"
         @click="reload"
       >
-        載入最新
+        {{ m.saveBanner.reload }}
       </button>
       <button
         type="button"
         class="btn"
         @click="project.keepThisTab()"
       >
-        保留這裡的版本
+        {{ m.saveBanner.keepThisTab }}
       </button>
     </template>
   </div>

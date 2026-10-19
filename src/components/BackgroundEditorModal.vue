@@ -1,7 +1,9 @@
 <script setup lang="ts">
+import { storeToRefs } from 'pinia'
 import { computed, nextTick, ref, watch } from 'vue'
 import { useProject } from '../stores/project'
 import { useUi } from '../stores/ui'
+import { useLocale } from '../stores/locale'
 import { useUndoToast } from '../composables/useUndoToast'
 import { assets, addCanvasAsset } from '../stores/assets'
 import { ctx2d, trim } from '../render/canvas'
@@ -9,6 +11,7 @@ import { edgeSeeds, erode, floodFill } from '../render/floodFill'
 
 const project = useProject()
 const ui = useUi()
+const { m } = storeToRefs(useLocale())
 const notifyUndoable = useUndoToast()
 const el = ref<HTMLCanvasElement>()
 const autoBtn = ref<HTMLButtonElement>()
@@ -52,17 +55,17 @@ function onClick(e: MouseEvent) {
   const x = Math.floor(((e.clientX - r.left) * c.width) / r.width)
   const y = Math.floor(((e.clientY - r.top) * c.height) / r.height)
   push()
-  if (!floodFill(c, [[x, y]], tol.value, global.value)) { undoStack.pop(); ui.notify('這裡沒有背景了。') }
+  if (!floodFill(c, [[x, y]], tol.value, global.value)) { undoStack.pop(); ui.notify(m.value.editor.nothingHere) }
 }
 function auto() {
   const c = el.value!
   push()
-  if (!floodFill(c, edgeSeeds(c.width, c.height), tol.value, false)) { undoStack.pop(); ui.notify('背景已經去乾淨了。') }
+  if (!floodFill(c, edgeSeeds(c.width, c.height), tol.value, false)) { undoStack.pop(); ui.notify(m.value.editor.alreadyClean) }
 }
 function shave() { push(); erode(el.value!) }
 function undo() {
   const u = undoStack.pop()
-  if (!u) { ui.notify('沒有上一步了。'); return }
+  if (!u) { ui.notify(m.value.editor.nothingToUndo); return }
   const c = el.value!
   c.width = u.width
   c.height = u.height
@@ -77,7 +80,7 @@ function reset() {
 function close() { ui.editing = null }
 /** Clicking the backdrop or pressing Esc only closes when nothing would be lost. */
 function leave() {
-  if (dirty.value) ui.notify('還沒套用。按「套用」保留，按「取消」放棄。')
+  if (dirty.value) ui.notify(m.value.editor.notApplied)
   else close()
 }
 
@@ -86,7 +89,7 @@ async function apply() {
   const before = s && assets.get(s.assetId)
   if (!s || !before) return
   const t = trim(el.value!)
-  if (!t) { ui.fail('整張都被去掉了，按「上一步」。'); return }
+  if (!t) { ui.fail(m.value.editor.allRemoved); return }
   busy.value = true
   try {
     const a = await addCanvasAsset(t)
@@ -95,11 +98,11 @@ async function apply() {
     s.assetId = a.id
     s.ar = t.height / t.width
     project.commit()
-    notifyUndoable('已去背。')
+    notifyUndoable(m.value.editor.applied)
     close()
   } catch (e) {
     console.error(e)
-    ui.fail('記憶體不足，無法套用去背。')
+    ui.fail(m.value.editor.applyFailed)
   } finally {
     busy.value = false
   }
@@ -125,7 +128,7 @@ function onKey(e: KeyboardEvent) { if (e.key === 'Escape') leave() }
         <canvas
           ref="el"
           class="block max-h-[70vh] max-w-full cursor-crosshair"
-          aria-label="點一下要去掉的背景顏色"
+          :aria-label="m.editor.canvas"
           @click="onClick"
         />
       </div>
@@ -134,10 +137,10 @@ function onKey(e: KeyboardEvent) { if (e.key === 'Escape') leave() }
           id="ed-title"
           class="text-[17px] font-semibold"
         >
-          去背
+          {{ m.editor.title }}
         </h2>
         <p class="text-[12.5px] text-muted">
-          點背景，同色的部分會一起去掉。
+          {{ m.editor.hint }}
         </p>
         <button
           ref="autoBtn"
@@ -145,9 +148,9 @@ function onKey(e: KeyboardEvent) { if (e.key === 'Escape') leave() }
           class="btn btn-primary"
           @click="auto"
         >
-          自動去背
+          {{ m.editor.auto }}
         </button>
-        <label class="grid grid-cols-[56px_1fr_32px] items-center gap-2"><span class="label">去除範圍</span>
+        <label class="grid grid-cols-[56px_1fr_32px] items-center gap-2"><span class="label">{{ m.editor.range }}</span>
           <input
             v-model.number="tol"
             type="range"
@@ -158,37 +161,37 @@ function onKey(e: KeyboardEvent) { if (e.key === 'Escape') leave() }
         <label class="flex items-center gap-2 text-[13px]"><input
           v-model="global"
           type="checkbox"
-        > 不相連的同色也去掉</label>
+        > {{ m.editor.global }}</label>
         <div class="flex flex-wrap gap-2">
           <button
             type="button"
             class="btn"
             @click="shave"
           >
-            修白邊
+            {{ m.editor.shave }}
           </button>
           <button
             type="button"
             class="btn"
             @click="undo"
           >
-            上一步
+            {{ m.editor.undo }}
           </button>
           <button
             type="button"
             class="btn"
             @click="reset"
           >
-            回到原圖
+            {{ m.editor.reset }}
           </button>
         </div>
         <p class="text-[12.5px] text-muted">
-          背景很雜的照片，建議先用 <a
+          {{ m.editor.busyPhotoBefore }} <a
             class="underline"
             href="https://www.remove.bg"
             target="_blank"
             rel="noopener"
-          >remove.bg</a> 去背。
+          >remove.bg</a> {{ m.editor.busyPhotoAfter }}
         </p>
         <div class="mt-auto flex justify-end gap-2">
           <button
@@ -196,7 +199,7 @@ function onKey(e: KeyboardEvent) { if (e.key === 'Escape') leave() }
             class="btn"
             @click="close"
           >
-            取消
+            {{ m.editor.cancel }}
           </button>
           <button
             type="button"
@@ -204,7 +207,7 @@ function onKey(e: KeyboardEvent) { if (e.key === 'Escape') leave() }
             :disabled="busy"
             @click="apply"
           >
-            套用
+            {{ m.editor.apply }}
           </button>
         </div>
       </div>

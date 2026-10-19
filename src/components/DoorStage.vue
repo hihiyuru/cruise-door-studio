@@ -1,7 +1,9 @@
 <script setup lang="ts">
+import { storeToRefs } from 'pinia'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useProject } from '../stores/project'
 import { useUi } from '../stores/ui'
+import { useLocale } from '../stores/locale'
 import { useStickerDrag } from '../composables/useStickerDrag'
 import { doorSvg } from '../render/doorSvg'
 import DoorStageSticker from './DoorStageSticker.vue'
@@ -10,6 +12,7 @@ import DoorStageToolbar from './DoorStageToolbar.vue'
 /** The door at true proportion, with every sticker on it. */
 const project = useProject()
 const ui = useUi()
+const { m } = storeToRefs(useLocale())
 
 /** On phones the settings sheet covers everything below this share of the screen. */
 const SHEET_TOP = 0.45
@@ -53,7 +56,7 @@ onBeforeUnmount(() => resizeObserver?.disconnect())
 <template>
   <section
     class="flex min-w-0 flex-col items-center gap-3 py-2"
-    aria-label="艙門"
+    :aria-label="m.door.stage"
   >
     <div class="grid max-w-full grid-cols-[auto_auto] gap-x-2 gap-y-1">
       <span />

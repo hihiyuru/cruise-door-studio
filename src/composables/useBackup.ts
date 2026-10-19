@@ -3,20 +3,22 @@ import { useUi } from '../stores/ui'
 import { assets } from '../stores/assets'
 import { exportProject } from '../storage/projectFile'
 import { downloadBlob, stamp } from '../export/download'
+import { useLocale } from '../stores/locale'
 
 /** Download the layout and every picture it uses as one .json file. */
 export function useBackup() {
   const project = useProject()
   const ui = useUi()
+  const i18n = useLocale()
   return async function backup() {
     try {
       const used = new Set(project.state.stickers.flatMap(s => [s.assetId, s.origAssetId]))
       const blob = await exportProject(JSON.parse(JSON.stringify(project.state)), [...assets.values()].filter(a => used.has(a.id)))
-      downloadBlob(blob, `艙門裝飾專案-${stamp()}.json`)
-      ui.notify('已下載備份。換電腦時用「開啟備份」接著做。')
+      downloadBlob(blob, i18n.m.backup.fileName(stamp()))
+      ui.notify(i18n.m.backup.downloaded)
     } catch (e) {
       console.error(e)
-      ui.fail('記憶體不足，無法下載備份。先刪掉幾張大圖再試一次。')
+      ui.fail(i18n.m.backup.downloadFailed)
     }
   }
 }

@@ -1,8 +1,10 @@
 <script setup lang="ts">
+import { storeToRefs } from 'pinia'
 import { computed, ref } from 'vue'
 import { ImagePlus, TriangleAlert } from 'lucide-vue-next'
 import { useProject } from '../stores/project'
 import { useUi } from '../stores/ui'
+import { useLocale } from '../stores/locale'
 import { useUndoToast } from '../composables/useUndoToast'
 import { hits } from '../domain/geometry'
 import { useAddFiles } from '../composables/useAddFiles'
@@ -10,6 +12,7 @@ import StickerCanvas from './StickerCanvas.vue'
 
 const project = useProject()
 const ui = useUi()
+const { m } = storeToRefs(useLocale())
 const notifyUndoable = useUndoToast()
 const add = useAddFiles()
 const fileInput = ref<HTMLInputElement>()
@@ -18,9 +21,10 @@ const over = ref(false)
 /** Top layer first, the way design tools list layers. */
 const rows = computed(() => [...project.state.stickers].reverse())
 const hasSamples = computed(() => project.state.stickers.some(s => s.sample))
+/** Names of the zones a sticker is in the way of, for the warning icon's label; empty when it is fine. */
 const problems = (id: string) => {
   const s = project.byId(id)
-  return s ? hits(s, project.door.keepOut, project.door) : []
+  return s ? hits(s, project.door.keepOut, project.door).map(z => m.value.door.zones[z]) : []
 }
 
 function onPick(e: Event) {
@@ -33,7 +37,7 @@ function clearSamples() {
   project.state.stickers = project.state.stickers.filter(s => !s.sample)
   ui.selected = null
   project.commit()
-  notifyUndoable('已清掉範例。')
+  notifyUndoable(m.value.stickers.samplesCleared)
 }
 
 let armed: ReturnType<typeof setTimeout> | undefined
@@ -50,7 +54,7 @@ function clearAll() {
   project.state.stickers = []
   ui.selected = null
   project.commit()
-  notifyUndoable(`已清空 ${n} 張。`)
+  notifyUndoable(m.value.stickers.cleared(n))
 }
 </script>
 
@@ -58,7 +62,7 @@ function clearAll() {
   <section
     class="flex min-w-0 flex-col gap-3 rounded-md"
     :class="over ? 'bg-surface-2 outline-2 outline-dashed outline-select' : ''"
-    aria-label="貼紙清單"
+    :aria-label="m.stickers.region"
     @dragover.prevent="over = true"
     @dragleave.self="over = false"
     @drop.prevent.stop="over = false; add($event.dataTransfer?.files)"
@@ -71,7 +75,7 @@ function clearAll() {
       <ImagePlus
         :size="17"
         aria-hidden="true"
-      />加入圖片
+      />{{ m.stickers.add }}
     </button>
     <input
       ref="fileInput"
@@ -82,12 +86,12 @@ function clearAll() {
       @change="onPick"
     >
     <p class="-mt-1 text-[12px] text-muted">
-      PNG、JPG、SVG。也可以拖進來或貼上。
+      {{ m.stickers.addHint }}
     </p>
 
     <div class="mt-2 flex items-baseline justify-between">
       <h2 class="section-title">
-        貼紙 <span class="num font-normal text-muted">{{ project.state.stickers.length }}</span>
+        {{ m.stickers.title }} <span class="num font-normal text-muted">{{ project.state.stickers.length }}</span>
       </h2>
       <button
         v-if="hasSamples"
@@ -95,7 +99,7 @@ function clearAll() {
         class="link"
         @click="clearSamples"
       >
-        清掉範例
+        {{ m.stickers.clearSamples }}
       </button>
     </div>
 
@@ -103,12 +107,12 @@ function clearAll() {
       v-if="!rows.length"
       class="text-[13px] text-muted"
     >
-      門上還沒有貼紙。<button
+      {{ m.stickers.empty }}<button
         type="button"
         class="link"
         @click="project.restoreSamples()"
       >
-        放回範例貼紙
+        {{ m.stickers.restoreSamples }}
       </button>
     </p>
     <ul
@@ -136,13 +140,13 @@ function clearAll() {
           </span>
           <span class="min-w-0 flex-1">
             <span class="block truncate text-[13px]">{{ s.name }}</span>
-            <span class="num text-[12px] text-muted">寬 {{ (s.w / 10).toFixed(1) }} cm</span>
+            <span class="num text-[12px] text-muted">{{ m.stickers.width((s.w / 10).toFixed(1)) }}</span>
           </span>
           <TriangleAlert
             v-if="problems(s.id).length"
             :size="15"
             class="shrink-0 text-warn"
-            :aria-label="`蓋到${problems(s.id).join('、')}`"
+            :aria-label="m.stickers.covers(m.list(problems(s.id)))"
           />
         </button>
       </li>
@@ -154,7 +158,7 @@ function clearAll() {
       class="link self-start !text-warn"
       @click="clearAll"
     >
-      {{ confirming ? `再按一次，刪掉全部 ${project.state.stickers.length} 張` : '清空全部貼紙' }}
+      {{ confirming ? m.stickers.confirmClearAll(project.state.stickers.length) : m.stickers.clearAll }}
     </button>
   </section>
 </template>

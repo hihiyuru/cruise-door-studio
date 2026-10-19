@@ -4,6 +4,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { ArrowLeft, ChevronDown, Printer, Redo2, Undo2 } from 'lucide-vue-next'
 import { useProject } from '../stores/project'
 import { useUi } from '../stores/ui'
+import { useLocale } from '../stores/locale'
 import { useUndoToast } from '../composables/useUndoToast'
 import { importProject, ProjectFileError } from '../storage/projectFile'
 import { useBackup } from '../composables/useBackup'
@@ -11,6 +12,7 @@ import PrintSpecPicker from './PrintSpecPicker.vue'
 
 const project = useProject()
 const ui = useUi()
+const { m } = storeToRefs(useLocale())
 const notifyUndoable = useUndoToast()
 const { layout } = storeToRefs(project)
 const doBackup = useBackup()
@@ -21,12 +23,12 @@ const menu = ref<HTMLElement>()
 const status = computed(() => {
   switch (project.saveStatus) {
     case 'loading': return ''
-    case 'saving': return '儲存中…'
-    case 'error': return '無法自動儲存'
-    case 'conflict': return '暫停儲存'
+    case 'saving': return m.value.topBar.saving
+    case 'error': return m.value.topBar.saveFailed
+    case 'conflict': return m.value.topBar.savePaused
     default: {
       const t = project.savedAt
-      return t ? `已自動儲存 ${t.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false })}` : '已自動儲存'
+      return t ? m.value.topBar.savedAt(t.toLocaleTimeString(m.value.timeTag, { hour: '2-digit', minute: '2-digit', hour12: false })) : m.value.topBar.saved
     }
   }
 })
@@ -53,10 +55,11 @@ async function onOpen(e: Event) {
     const { lost } = await project.replaceAll(p, list)
     ui.selected = null
     ui.step = 'arrange'
-    if (lost) ui.fail(`已開啟備份，但找不到 ${lost} 張圖，已從門上移除。`)
-    else notifyUndoable('已開啟備份。')
+    if (lost) ui.fail(m.value.backup.openedWithLost(lost))
+    else notifyUndoable(m.value.backup.opened)
   } catch (err) {
-    ui.fail(err instanceof ProjectFileError ? err.message : '無法開啟，檔案可能已損毀。')
+    console.error(err)
+    ui.fail(err instanceof ProjectFileError ? m.value.backup.notBackup : m.value.backup.openFailed)
   }
 }
 
@@ -79,10 +82,10 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
       <ArrowLeft
         :size="16"
         aria-hidden="true"
-      />回到門上
+      />{{ m.topBar.back }}
     </button>
     <h1 class="mr-auto text-[17px] font-bold">
-      郵輪艙門裝飾工作台
+      {{ m.app.title }}
     </h1>
 
     <span
@@ -96,8 +99,8 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
         type="button"
         class="btn btn-quiet !px-2"
         :disabled="!project.canUndo"
-        title="復原（⌘Z）"
-        aria-label="復原"
+        :title="m.topBar.undoTitle"
+        :aria-label="m.topBar.undo"
         @click="undo"
       >
         <Undo2 :size="17" />
@@ -106,8 +109,8 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
         type="button"
         class="btn btn-quiet !px-2"
         :disabled="!project.canRedo"
-        title="重做（⇧⌘Z）"
-        aria-label="重做"
+        :title="m.topBar.redoTitle"
+        :aria-label="m.topBar.redo"
         @click="redo"
       >
         <Redo2 :size="17" />
@@ -125,7 +128,7 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
         aria-haspopup="menu"
         @click="menuOpen = !menuOpen"
       >
-        備份<ChevronDown
+        {{ m.topBar.backup }}<ChevronDown
           :size="15"
           aria-hidden="true"
         />
@@ -141,7 +144,7 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
           class="block w-full rounded px-3 py-2 text-left hover:bg-surface-2"
           @click="backup"
         >
-          下載備份<span class="block text-[12px] text-muted">排版和圖片存成一個檔案，換電腦也能接著做</span>
+          {{ m.topBar.downloadBackup }}<span class="block text-[12px] text-muted">{{ m.topBar.downloadBackupHint }}</span>
         </button>
         <button
           type="button"
@@ -149,7 +152,7 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
           class="block w-full rounded px-3 py-2 text-left hover:bg-surface-2"
           @click="openFile"
         >
-          開啟備份<span class="block text-[12px] text-muted">會取代目前的排版，可以復原</span>
+          {{ m.topBar.openBackup }}<span class="block text-[12px] text-muted">{{ m.topBar.openBackupHint }}</span>
         </button>
       </div>
       <input
@@ -171,10 +174,10 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
       <Printer
         :size="16"
         aria-hidden="true"
-      />列印／下載 PDF<span
+      />{{ m.topBar.print }}<span
         v-if="sheetCount"
         class="num opacity-85"
-      >（{{ sheetCount }} 張）</span>
+      >{{ m.topBar.sheetCount(sheetCount) }}</span>
     </button>
   </header>
 </template>

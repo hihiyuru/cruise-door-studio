@@ -1,11 +1,16 @@
 <script setup lang="ts">
+import { storeToRefs } from 'pinia'
 import { computed } from 'vue'
 import { useProject } from '../stores/project'
 import { DOOR_OPTIONS, CUSTOM_DOOR_ID } from '../domain/doors'
+import { useLocale } from '../stores/locale'
 
 /** Shown in the right column while no sticker is selected. */
 const project = useProject()
+const { m } = storeToRefs(useLocale())
 const door = computed(() => project.door)
+/** The custom door's option reads 「自訂尺寸…」 since choosing it opens the size fields. */
+const doorOption = (id: string) => (id === CUSTOM_DOOR_ID ? m.value.door.customOption : m.value.door.names[id])
 const clampDoor = (v: string) => Math.max(300, Math.min(3000, Math.round(+v || 0)))
 
 function setCustomDoor(key: 'w' | 'h', e: Event) {
@@ -26,14 +31,14 @@ function setDoor(id: string) {
 <template>
   <section
     class="flex min-w-0 flex-col gap-4"
-    aria-label="門的設定"
+    :aria-label="m.door.region"
   >
     <h2 class="section-title">
-      門
+      {{ m.door.title }}
     </h2>
 
     <label class="flex flex-col gap-1">
-      <span class="label">門款</span>
+      <span class="label">{{ m.door.model }}</span>
       <select
         class="input"
         :value="project.state.doorId"
@@ -41,9 +46,9 @@ function setDoor(id: string) {
       >
         <option
           v-for="d in DOOR_OPTIONS"
-          :key="d.id"
-          :value="d.id"
-        >{{ d.label }}</option>
+          :key="d"
+          :value="d"
+        >{{ doorOption(d) }}</option>
       </select>
     </label>
 
@@ -51,7 +56,7 @@ function setDoor(id: string) {
       v-if="project.state.doorId === CUSTOM_DOOR_ID"
       class="grid grid-cols-2 gap-3"
     >
-      <label class="flex flex-col gap-1"><span class="label">寬（mm）</span>
+      <label class="flex flex-col gap-1"><span class="label">{{ m.door.widthMm }}</span>
         <input
           class="input num"
           type="number"
@@ -60,7 +65,7 @@ function setDoor(id: string) {
           :value="project.state.customDoor.w"
           @change="setCustomDoor('w', $event)"
         ></label>
-      <label class="flex flex-col gap-1"><span class="label">高（mm）</span>
+      <label class="flex flex-col gap-1"><span class="label">{{ m.door.heightMm }}</span>
         <input
           class="input num"
           type="number"
@@ -75,7 +80,7 @@ function setDoor(id: string) {
       v-if="door.fixtures"
       class="flex flex-col gap-1"
     >
-      <span class="label">門牌號碼（只影響預覽）</span>
+      <span class="label">{{ m.door.roomNo }}</span>
       <input
         class="input num"
         maxlength="6"
@@ -93,26 +98,26 @@ function setDoor(id: string) {
           v-model="project.state.view.keepOut"
           type="checkbox"
           @change="project.commit()"
-        >標出不能貼的區域</label>
+        >{{ m.door.showKeepOut }}</label>
       <label class="flex items-center gap-2">
         <input
           v-model="project.state.view.grid"
           type="checkbox"
           @change="project.commit()"
-        >10 公分格線</label>
+        >{{ m.door.grid }}</label>
     </div>
 
     <details class="text-[12.5px] text-muted">
       <summary class="cursor-pointer">
-        尺寸依據
+        {{ m.door.basis }}
       </summary>
       <p class="mt-1.5">
-        {{ door.w / 10 }} × {{ door.h / 10 }} cm。{{ door.note }}
+        {{ m.door.size(door.w / 10, door.h / 10) }}{{ m.door.notes[door.id] }}
       </p>
     </details>
 
     <p class="border-t border-line pt-3 text-[12.5px] text-muted">
-      點貼紙就能調整大小、去背和白邊。
+      {{ m.door.hint }}
     </p>
   </section>
 </template>

@@ -3,9 +3,9 @@ import { storeToRefs } from 'pinia'
 import { computed, ref, watch } from 'vue'
 import { useProject } from '../stores/project'
 import { useUi } from '../stores/ui'
+import { useLocale } from '../stores/locale'
 import { useUndoToast } from '../composables/useUndoToast'
 import { assets, lookupArtwork } from '../stores/assets'
-import { paperName, paperFileName } from '../domain/papers'
 import { isBlurry, widthToFit } from '../domain/geometry'
 import { formatCm } from '../domain/format'
 import { usePrintSettings } from '../composables/usePrintSettings'
@@ -20,15 +20,15 @@ const project = useProject()
 const ui = useUi()
 const notifyUndoable = useUndoToast()
 const { layout, usable } = storeToRefs(project)
-const { pr } = usePrintSettings()
+const { pr, paperName: paperLabel, paperFileName } = usePrintSettings()
+const { m } = storeToRefs(useLocale())
 
 const sheets = computed(() => layout.value.sheets)
-const paperLabel = computed(() => paperName(project.paper))
 const cost = computed(() => (project.paper.price ? sheets.value.length * project.paper.price : null))
 
 /** Stickers too big for the paper, with the width that would make each fit (null when no width would). */
 const oversized = computed(() => layout.value.tooBig.map(p => ({ sticker: p.sticker, fitW: widthToFit(p.sticker, usable.value.w, usable.value.h) })))
-const blurryNames = computed(() => blurry.value.map(s => s.name).join('、'))
+const blurryNames = computed(() => m.value.list(blurry.value.map(s => s.name)))
 
 const blurry = computed(() => project.state.stickers.filter(s => {
   const a = assets.get(s.assetId)
@@ -45,7 +45,7 @@ function shrink(id: string, w: number) {
   s.w = w
   s.tile = false
   project.commit()
-  notifyUndoable(`已縮到 ${formatCm(w)} cm。`)
+  notifyUndoable(m.value.print.shrunk(formatCm(w)))
 }
 function split(id: string) {
   const s = project.byId(id)
@@ -53,8 +53,8 @@ function split(id: string) {
   s.tile = true
   project.commit()
   const first = layout.value.split.find(p => p.sticker.id === id)
-  if (first) notifyUndoable(`已分成 ${first.tile!.n} 張印。`)
-  else ui.fail('紙張太小，無法分張印。')
+  if (first) notifyUndoable(m.value.print.splitDone(first.tile!.n))
+  else ui.fail(m.value.print.tooSmallToSplit)
 }
 
 /* ---------- output ---------- */
@@ -69,7 +69,8 @@ watch([sheets, () => project.paper], () => (parts.value = []))
 
 async function downloadPdf() {
   if (!sheets.value.length || busy.value) return
-  busy.value = '準備中…'
+  const t = m.value.print
+  busy.value = t.preparing
   parts.value = []
   try {
     const files = await buildPdfs(sheets.value, {
@@ -77,20 +78,20 @@ async function downloadPdf() {
       margin: pr.value.margin,
       getArtwork: lookupArtwork,
       maxFileBytes: pr.value.place === 'ibon' ? IBON_MAX_BYTES : undefined,
-      onProgress: (d, t) => (busy.value = `產生中 ${d} / ${t} 張…`),
+      onProgress: (done, total) => (busy.value = t.progress(done, total)),
     })
-    const base = `艙門貼紙_${paperFileName(pr.value.place, project.paper)}_${sheets.value.length}張`
+    const base = t.fileBase(paperFileName.value, sheets.value.length)
     if (files.length === 1) {
       downloadBlob(files[0].blob, `${base}.pdf`)
-      ui.notify('已下載 PDF。')
+      ui.notify(t.downloaded)
       return
     }
-    parts.value = files.map(f => ({ blob: f.blob, name: `${base}_第${f.from}-${f.to}張.pdf`, label: `第 ${f.from}–${f.to} 張`, done: false }))
-    ui.notify(`檔案較大，已分成 ${files.length} 個 PDF。`)
+    parts.value = files.map(f => ({ blob: f.blob, name: t.partFile(base, f.from, f.to), label: t.partLabel(f.from, f.to), done: false }))
+    ui.notify(t.splitFiles(files.length))
   } catch (e) {
     console.error(e)
-    if (e instanceof MissingArtworkError) ui.fail(`找不到「${e.stickerName}」的圖，無法產生 PDF。換圖或刪掉這張再試一次。`)
-    else ui.fail('記憶體不足，無法產生 PDF。先縮小最大的幾張。')
+    if (e instanceof MissingArtworkError) ui.fail(t.missingArtwork(e.stickerName))
+    else ui.fail(t.outOfMemory)
   } finally {
     busy.value = null
   }
@@ -103,9 +104,9 @@ function downloadPart(p: Part) {
 
 async function downloadDoor() {
   try {
-    downloadBlob(await doorPreviewPng(project.door, project.state.stickers, project.state.roomNo, lookupArtwork), '艙門預覽.png')
+    downloadBlob(await doorPreviewPng(project.door, project.state.stickers, project.state.roomNo, lookupArtwork), m.value.print.doorFile)
   } catch {
-    ui.fail('無法產生預覽圖。')
+    ui.fail(m.value.print.doorFailed)
   }
 }
 </script>
@@ -114,7 +115,7 @@ async function downloadDoor() {
   <div class="grid grid-cols-1 items-start gap-8 lg:grid-cols-[340px_minmax(0,1fr)]">
     <section
       class="flex flex-col gap-5"
-      aria-label="印刷設定"
+      :aria-label="m.print.region"
     >
       <PrintSettingsFields />
 
@@ -123,15 +124,15 @@ async function downloadDoor() {
           v-if="sheets.length"
           class="text-[15px]"
         >
-          共 <b class="num">{{ sheets.length }}</b> 張 {{ paperLabel }}<template v-if="cost">
-            ，約 <b class="num">{{ cost }}</b> 元
+          {{ m.print.totalBefore }} <b class="num">{{ sheets.length }}</b> {{ m.print.totalSheets(paperLabel) }}<template v-if="cost">
+            {{ m.print.costBefore }} <b class="num">{{ cost }}</b> {{ m.print.costAfter }}
           </template>
         </p>
         <p
           v-else
           class="text-[13px] text-muted"
         >
-          門上還沒有貼紙。
+          {{ m.print.empty }}
         </p>
         <button
           type="button"
@@ -143,14 +144,14 @@ async function downloadDoor() {
             v-if="!busy"
             :size="17"
             aria-hidden="true"
-          />{{ busy ?? '下載 PDF' }}
+          />{{ busy ?? m.print.download }}
         </button>
         <div
           v-if="parts.length"
           class="flex flex-col gap-1.5"
         >
           <p class="text-[12.5px] text-muted">
-            每個都要下載，到 ibon 也要每個都傳。
+            {{ m.print.partsHint }}
           </p>
           <button
             v-for="p in parts"
@@ -169,26 +170,26 @@ async function downloadDoor() {
             ><Check
               :size="14"
               aria-hidden="true"
-            />已下載</span>
+            />{{ m.print.partDone }}</span>
           </button>
         </div>
         <p
           v-if="pr.place === 'ibon'"
           class="text-[12.5px] text-muted"
         >
-          先印一張，確認比例尺是 5 公分。
+          {{ m.print.ibonTip }}
         </p>
         <p
           v-else-if="pr.place === 'shop'"
           class="text-[12.5px] text-muted"
         >
-          照實際大小印。需要 CMYK 的話，交給店家轉。
+          {{ m.print.shopTip }}
         </p>
         <p
           v-else
           class="text-[12.5px] text-muted"
         >
-          列印時選「實際大小」，不要選「符合頁面」。
+          {{ m.print.homeTip }}
         </p>
       </div>
 
@@ -197,14 +198,14 @@ async function downloadDoor() {
         :key="sp.key"
         class="text-[12.5px] text-muted"
       >
-        「{{ sp.sticker.name }}」分成 {{ sp.tile!.n }} 張印（{{ sp.tile!.label }}-1～{{ sp.tile!.label }}-{{ sp.tile!.n }}），拼的時候疊 1 公分對齊。
+        {{ m.print.tiled(sp.sticker.name, sp.tile!.n, sp.tile!.label) }}
       </p>
 
       <div
         v-if="oversized.length"
         class="warnbox flex flex-col gap-2"
       >
-        <p>這幾張 {{ paperLabel }} 印不下：</p>
+        <p>{{ m.print.tooBig(paperLabel) }}</p>
         <div
           v-for="o in oversized"
           :key="o.sticker.id"
@@ -217,14 +218,14 @@ async function downloadDoor() {
             class="btn !py-1"
             @click="shrink(o.sticker.id, o.fitW)"
           >
-            縮到 {{ formatCm(o.fitW) }} cm
+            {{ m.print.shrinkTo(formatCm(o.fitW)) }}
           </button>
           <button
             type="button"
             class="btn !py-1"
             @click="split(o.sticker.id)"
           >
-            分成幾張印
+            {{ m.print.split }}
           </button>
         </div>
       </div>
@@ -232,15 +233,15 @@ async function downloadDoor() {
         v-if="blurry.length"
         class="warnbox"
       >
-        「{{ blurryNames }}」圖太小，印出來會糊。
+        {{ m.print.blurry(blurryNames) }}
       </p>
 
       <details class="text-[13px]">
         <summary class="cursor-pointer text-muted">
-          紙張邊界與間距
+          {{ m.print.marginsTitle }}
         </summary>
         <div class="mt-2 grid grid-cols-2 gap-3">
-          <label class="flex flex-col gap-1"><span class="label">邊界（mm）</span><input
+          <label class="flex flex-col gap-1"><span class="label">{{ m.print.marginMm }}</span><input
             class="input num"
             type="number"
             min="6"
@@ -248,7 +249,7 @@ async function downloadDoor() {
             :value="pr.margin"
             @change="setNum('margin', ($event.target as HTMLInputElement).value, 6, 25)"
           ></label>
-          <label class="flex flex-col gap-1"><span class="label">間距（mm）</span><input
+          <label class="flex flex-col gap-1"><span class="label">{{ m.print.gapMm }}</span><input
             class="input num"
             type="number"
             min="0"
@@ -264,19 +265,19 @@ async function downloadDoor() {
         class="link self-start"
         @click="downloadDoor"
       >
-        下載整扇門的預覽圖
+        {{ m.print.downloadDoor }}
       </button>
     </section>
 
     <section
       class="min-w-0"
-      aria-label="每一張的預覽"
+      :aria-label="m.print.previewRegion"
     >
       <p
         v-if="!sheets.length"
         class="text-[13px] text-muted"
       >
-        回到門上加入圖片後，這裡會顯示排好的紙張。
+        {{ m.print.noSheets }}
       </p>
       <div class="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-4">
         <SheetPreview
@@ -286,7 +287,7 @@ async function downloadDoor() {
           :paper="project.paper"
           :margin="pr.margin"
           :index="i"
-          :label="`第 ${i + 1} 張`"
+          :label="m.print.sheetLabel(i + 1)"
         />
       </div>
     </section>

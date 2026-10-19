@@ -10,6 +10,7 @@ import { sanitizeProject } from '../domain/projectSchema'
 import { currentRev, loadProject, saveProject, SaveConflict, type StoredAsset } from '../storage/idb'
 import { assets, addAsset, addCanvasAsset, restoreAssets } from './assets'
 import { sampleArt } from '../render/samples'
+import { useLocale } from './locale'
 
 const HISTORY_LIMIT = 50
 /** New pictures start this wide; when many arrive at once, a little smaller so more fit on the door. */
@@ -190,11 +191,13 @@ export const useProject = defineStore('project', () => {
   }
 
   /* ---------- stickers ---------- */
+  /** Sample names are saved with the layout in the language they were added in, like any other sticker name. */
   async function addSamples() {
+    const names = useLocale().m.samples
     for (const s of sampleArt()) {
       const a = await addCanvasAsset(s.art)
       state.stickers.push({
-        id: newId(), name: s.name, assetId: a.id, origAssetId: a.id, ar: a.art.height / a.art.width,
+        id: newId(), name: names[s.kind], assetId: a.id, origAssetId: a.id, ar: a.art.height / a.art.width,
         w: s.w, x: s.x, y: s.y, rot: s.rot, border: 3, cut: false, tile: false, sample: true,
       })
     }
@@ -210,7 +213,7 @@ export const useProject = defineStore('project', () => {
       try {
         const a = await addAsset(f, isSvg(f))
         const s: Sticker = {
-          id: newId(), name: fileBaseName(f.name) || '貼上的圖片', assetId: a.id, origAssetId: a.id,
+          id: newId(), name: fileBaseName(f.name) || useLocale().m.stickers.pastedName, assetId: a.id, origAssetId: a.id,
           ar: a.art.height / a.art.width, w, x: d.w / 2, y: d.h * 0.75, rot: 0, border: 2, cut: false, tile: false,
         }
         // no free spot left: fan them out a little around the middle of the lower half so each can still be grabbed
