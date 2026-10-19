@@ -1,11 +1,14 @@
 <script setup lang="ts">
+import { storeToRefs } from 'pinia'
 import { TriangleAlert, X } from 'lucide-vue-next'
 import { computed } from 'vue'
 import { useUi } from '../stores/ui'
 import { useProject } from '../stores/project'
+import { useLocale } from '../stores/locale'
 
 const ui = useUi()
 const project = useProject()
+const { m } = storeToRefs(useLocale())
 /** An undo offer only makes sense while its step is still the latest one. */
 const hasAction = computed(() => !!ui.toast?.action && (ui.toast.step === undefined || ui.toast.step === project.head))
 
@@ -44,7 +47,7 @@ function run() {
         v-if="ui.toast.tone === 'error'"
         type="button"
         class="-mr-1 shrink-0 rounded p-0.5 hover:bg-warn/10"
-        aria-label="關閉"
+        :aria-label="m.toast.close"
         @click="ui.dismiss()"
       >
         <X :size="16" />

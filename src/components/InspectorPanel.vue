@@ -4,15 +4,18 @@ import { computed, ref } from 'vue'
 import { Check, Pencil, TriangleAlert, X } from 'lucide-vue-next'
 import { useProject } from '../stores/project'
 import { useUi } from '../stores/ui'
+import { useLocale } from '../stores/locale'
 import { useUndoToast } from '../composables/useUndoToast'
 import { useStickerActions } from '../composables/useStickerActions'
 import { assets, assetsVersion, isSvgFile } from '../stores/assets'
 import { clampStickerWidth, hits, isBlurry, outer, snapAngle, widthToFit } from '../domain/geometry'
 import { formatCm } from '../domain/format'
-import { paperName } from '../domain/papers'
+import { usePrintSettings } from '../composables/usePrintSettings'
 
 const project = useProject()
 const ui = useUi()
+const { m } = storeToRefs(useLocale())
+const { paperName: paperLabel } = usePrintSettings()
 const notifyUndoable = useUndoToast()
 const actions = useStickerActions()
 const { layout, usable } = storeToRefs(project)
@@ -21,8 +24,6 @@ const replaceInput = ref<HTMLInputElement>()
 const s = computed(() => project.byId(ui.selected))
 const size = computed(() => (s.value ? outer(s.value) : null))
 
-const ZONE_NAMES: Record<string, string> = { 門牌: '門牌', 貓眼: '貓眼', 門鎖和門把: '門把' }
-const paperLabel = computed(() => paperName(project.paper))
 
 /** Where it sits: in the way > off the door > too blurry. Only the most important one is shown. */
 const placement = computed(() => {
@@ -30,11 +31,11 @@ const placement = computed(() => {
   const st = s.value
   if (!st) return null
   const hit = hits(st, project.door.keepOut, project.door)
-  const zone = hit.find(h => h !== '門外')
-  if (zone) return `擋到${ZONE_NAMES[zone] ?? zone}了，挪開一點。`
-  if (hit.length) return '超出門外了。'
+  const zone = hit.find(h => h !== 'outside')
+  if (zone) return m.value.inspector.inTheWay(m.value.door.zonesShort[zone])
+  if (hit.length) return m.value.inspector.offDoor
   const a = assets.get(st.assetId)
-  if (a && isBlurry({ isSvg: a.isSvg, pxWidth: a.art.width }, st)) return '圖太小，印出來會糊。'
+  if (a && isBlurry({ isSvg: a.isSvg, pxWidth: a.art.width }, st)) return m.value.inspector.blurry
   return null
 })
 
@@ -43,9 +44,10 @@ const printFit = computed(() => {
   const st = s.value
   if (!st) return null
   const fitW = widthToFit(st, usable.value.w, usable.value.h)
-  if (fitW === null) return { ok: true, text: `${paperLabel.value} 一張印得完。`, fitW: null }
+  const t = m.value.inspector
+  if (fitW === null) return { ok: true, text: t.fitsOne(paperLabel.value), fitW: null }
   const split = layout.value.split.find(p => p.sticker.id === st.id)
-  return { ok: false, text: split ? `${paperLabel.value} 印不下，會分成 ${split.tile!.n} 張印。` : `${paperLabel.value} 印不下。`, fitW }
+  return { ok: false, text: split ? t.willSplit(paperLabel.value, split.tile!.n) : t.doesNotFit(paperLabel.value), fitW }
 })
 
 /** The print line shows when the sticker won't fit, or as the only line when nothing else needs saying. */
@@ -78,7 +80,7 @@ function shrinkToFit() {
 
 function onTile() {
   project.commit()
-  if (s.value?.tile && !layout.value.split.some(p => p.sticker.id === s.value!.id)) ui.fail('紙張太小，無法分張印。')
+  if (s.value?.tile && !layout.value.split.some(p => p.sticker.id === s.value!.id)) ui.fail(m.value.inspector.tooSmallToSplit)
 }
 
 function onRename(e: Event) {
@@ -93,9 +95,9 @@ async function onReplace(e: Event) {
   if (!f || !s.value) return
   try {
     await project.replaceArt(s.value.id, f, isSvgFile(f))
-    notifyUndoable('已換圖。')
+    notifyUndoable(m.value.inspector.replaced)
   } catch {
-    ui.fail(`無法開啟 ${f.name}，改用 JPG 或 PNG。`)
+    ui.fail(m.value.stickers.cannotOpen(f.name))
   }
 }
 </script>
@@ -104,14 +106,14 @@ async function onReplace(e: Event) {
   <section
     v-if="s"
     class="flex min-w-0 flex-col gap-3.5"
-    aria-label="貼紙設定"
+    :aria-label="m.inspector.region"
   >
     <div class="flex items-center gap-2">
       <input
         class="input !border-transparent !bg-transparent !px-0 text-[15px] font-semibold hover:!border-line focus:!border-line focus:!px-2"
         :value="s.name"
-        aria-label="名稱"
-        title="點一下可以改名稱"
+        :aria-label="m.inspector.name"
+        :title="m.inspector.renameTitle"
         @change="onRename"
       >
       <Pencil
@@ -122,7 +124,7 @@ async function onReplace(e: Event) {
       <button
         type="button"
         class="btn btn-quiet shrink-0 !px-1.5"
-        aria-label="取消選取"
+        :aria-label="m.inspector.deselect"
         @click="ui.selected = null"
       >
         <X :size="17" />
@@ -133,7 +135,7 @@ async function onReplace(e: Event) {
       <label
         class="label"
         for="ins-w"
-      >寬度</label>
+      >{{ m.inspector.width }}</label>
       <div class="flex items-center gap-2">
         <input
           id="ins-w"
@@ -145,13 +147,13 @@ async function onReplace(e: Event) {
           @change="setWidthCm(($event.target as HTMLInputElement).value)"
         >
         <span class="text-[13px]">cm</span>
-        <span class="num ml-auto text-[12px] text-muted">成品 {{ formatCm(size!.w) }} × {{ formatCm(size!.h) }}</span>
+        <span class="num ml-auto text-[12px] text-muted">{{ m.inspector.finished(formatCm(size!.w), formatCm(size!.h)) }}</span>
       </div>
 
       <label
         class="label"
         for="ins-rot"
-      >旋轉</label>
+      >{{ m.inspector.rotation }}</label>
       <div class="flex items-center gap-2">
         <input
           id="ins-rot"
@@ -171,14 +173,14 @@ async function onReplace(e: Event) {
           class="link shrink-0"
           @click="straighten"
         >
-          轉正
+          {{ m.inspector.straighten }}
         </button>
       </div>
 
       <label
         class="label"
         for="ins-border"
-      >白邊</label>
+      >{{ m.inspector.border }}</label>
       <div class="flex items-center gap-2">
         <input
           id="ins-border"
@@ -200,7 +202,7 @@ async function onReplace(e: Event) {
         v-model="s.cut"
         type="checkbox"
         @change="project.commit()"
-      >外圍加灰色裁切線</label>
+      >{{ m.inspector.cutLine }}</label>
 
     <div
       v-if="placement || printFit"
@@ -236,7 +238,7 @@ async function onReplace(e: Event) {
         <button
           type="button"
           class="text-left underline decoration-dotted underline-offset-2"
-          title="換列印地點或紙張"
+          :title="m.inspector.changePrintTitle"
           @click.stop="ui.specOpen = true"
         >
           {{ printFit.text }}
@@ -248,14 +250,14 @@ async function onReplace(e: Event) {
           class="btn"
           @click="shrinkToFit"
         >
-          縮到 {{ formatCm(printFit.fitW) }} cm
+          {{ m.inspector.shrinkTo(formatCm(printFit.fitW)) }}
         </button>
         <label class="flex items-center gap-2">
           <input
             v-model="s.tile"
             type="checkbox"
             @change="onTile"
-          >分成幾張印，自己拼</label>
+          >{{ m.inspector.tile }}</label>
       </template>
     </div>
 
@@ -265,14 +267,14 @@ async function onReplace(e: Event) {
         class="btn"
         @click="ui.editing = s.id"
       >
-        去背
+        {{ m.inspector.removeBackground }}
       </button>
       <button
         type="button"
         class="btn"
         @click="replaceInput?.click()"
       >
-        換圖
+        {{ m.inspector.replace }}
       </button>
       <input
         ref="replaceInput"
@@ -286,15 +288,15 @@ async function onReplace(e: Event) {
         class="btn"
         @click="actions.duplicate(s.id)"
       >
-        複製
+        {{ m.inspector.duplicate }}
       </button>
       <button
         type="button"
         class="btn"
-        title="在門的另一側對稱位置複製一張"
+        :title="m.inspector.mirrorTitle"
         @click="actions.duplicate(s.id, true)"
       >
-        左右對稱複製
+        {{ m.inspector.mirror }}
       </button>
     </div>
     <div class="flex flex-wrap items-center gap-2">
@@ -303,21 +305,21 @@ async function onReplace(e: Event) {
         class="btn"
         @click="project.reorder(s.id, project.state.stickers.length)"
       >
-        移到最上層
+        {{ m.inspector.toTop }}
       </button>
       <button
         type="button"
         class="btn"
         @click="project.reorder(s.id, 0)"
       >
-        移到最下層
+        {{ m.inspector.toBottom }}
       </button>
       <button
         type="button"
         class="btn btn-quiet btn-danger ml-auto"
         @click="actions.remove(s.id)"
       >
-        刪除
+        {{ m.inspector.delete }}
       </button>
     </div>
   </section>

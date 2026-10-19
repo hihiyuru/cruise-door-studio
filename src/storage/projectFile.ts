@@ -32,6 +32,7 @@ export async function exportProject(project: ProjectState, assets: StoredAsset[]
   return new Blob([JSON.stringify(file)], { type: 'application/json' })
 }
 
+/** The file is not a backup made by this tool. The message is for debugging; the screen shows its own text. */
 export class ProjectFileError extends Error {}
 
 export async function importProject(f: Blob): Promise<{ project: ProjectState; assets: StoredAsset[] }> {
@@ -39,10 +40,10 @@ export async function importProject(f: Blob): Promise<{ project: ProjectState; a
   try {
     file = JSON.parse(await f.text())
   } catch {
-    throw new ProjectFileError('無法開啟，這不是備份檔。')
+    throw new ProjectFileError('not a backup file')
   }
   if (file?.format !== FORMAT || !file.project || !Array.isArray(file.assets)) {
-    throw new ProjectFileError('無法開啟，這不是備份檔。')
+    throw new ProjectFileError('not a backup file')
   }
   // only pictures embedded in the file are read; nothing is ever fetched from a link inside it
   const assets = file.assets

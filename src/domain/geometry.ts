@@ -1,4 +1,4 @@
-import type { KeepOut, Rect, Sticker } from './types'
+import type { KeepOut, Rect, Sticker, Zone } from './types'
 
 /** Extra margin kept around artwork so anti-aliased edges are never clipped. */
 const EDGE = 0.3
@@ -24,20 +24,20 @@ export function bbox(s: Sticker): Rect {
   return { x: s.x - W / 2, y: s.y - H / 2, w: W, h: H }
 }
 
-/** Names of the no-stick zones a sticker overlaps, plus「門外」when it leaves the door. */
-export function hits(s: Sticker, keepOut: KeepOut[], door: { w: number; h: number }): string[] {
+/** The no-stick zones a sticker overlaps, plus 'outside' when it leaves the door. */
+export function hits(s: Sticker, keepOut: KeepOut[], door: { w: number; h: number }): Zone[] {
   const b = bbox(s)
-  const out: string[] = []
+  const out: Zone[] = []
   for (const k of keepOut) {
     if (k.type === 'rect') {
-      if (b.x < k.x + k.w && b.x + b.w > k.x && b.y < k.y + k.h && b.y + b.h > k.y) out.push(k.name)
+      if (b.x < k.x + k.w && b.x + b.w > k.x && b.y < k.y + k.h && b.y + b.h > k.y) out.push(k.id)
     } else {
       const nx = Math.max(b.x, Math.min(k.cx, b.x + b.w))
       const ny = Math.max(b.y, Math.min(k.cy, b.y + b.h))
-      if ((nx - k.cx) ** 2 + (ny - k.cy) ** 2 < k.r * k.r) out.push(k.name)
+      if ((nx - k.cx) ** 2 + (ny - k.cy) ** 2 < k.r * k.r) out.push(k.id)
     }
   }
-  if (b.x < 0 || b.y < 0 || b.x + b.w > door.w || b.y + b.h > door.h) out.push('門外')
+  if (b.x < 0 || b.y < 0 || b.x + b.w > door.w || b.y + b.h > door.h) out.push('outside')
   return out
 }
 

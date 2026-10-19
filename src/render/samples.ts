@@ -10,8 +10,10 @@ function canvas(w: number, h: number): [Canvas, CanvasRenderingContext2D] {
   return [c, x]
 }
 
-/** Three simple example stickers drawn on canvas, so a first visit shows what the tool does. */
-export function sampleArt(): { name: string; art: Canvas; w: number; x: number; y: number; rot: number }[] {
+export type SampleKind = 'badge' | 'star' | 'flag'
+
+/** Three simple example stickers drawn on canvas, so a first visit shows what the tool does. Names are added by the caller, in the current language. */
+export function sampleArt(): { kind: SampleKind; art: Canvas; w: number; x: number; y: number; rot: number }[] {
   const [badge, b] = canvas(600, 600)
   b.fillStyle = '#1F3A6B'
   b.beginPath(); b.arc(300, 300, 290, 0, Math.PI * 2); b.fill()
@@ -40,8 +42,8 @@ export function sampleArt(): { name: string; art: Canvas; w: number; x: number; 
   f.beginPath(); f.moveTo(0, 150); f.quadraticCurveTo(350, 110, 700, 175); f.lineTo(700, 195); f.quadraticCurveTo(350, 140, 0, 200); f.fill()
 
   return [
-    { name: '範例：圓章', art: badge, w: 120, x: 355, y: 1350, rot: 0 },
-    { name: '範例：星星', art: star, w: 110, x: 170, y: 700, rot: -12 },
-    { name: '範例：旗子', art: flag, w: 130, x: 560, y: 140, rot: 8 },
+    { kind: 'badge', art: badge, w: 120, x: 355, y: 1350, rot: 0 },
+    { kind: 'star', art: star, w: 110, x: 170, y: 700, rot: -12 },
+    { kind: 'flag', art: flag, w: 130, x: 560, y: 140, rot: 8 },
   ]
 }

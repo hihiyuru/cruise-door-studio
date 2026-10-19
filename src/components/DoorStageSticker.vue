@@ -1,8 +1,10 @@
 <script setup lang="ts">
+import { storeToRefs } from 'pinia'
 import { computed } from 'vue'
 import { MoveDiagonal2, RotateCw } from 'lucide-vue-next'
 import { useProject } from '../stores/project'
 import { useUi } from '../stores/ui'
+import { useLocale } from '../stores/locale'
 import { useStickerActions } from '../composables/useStickerActions'
 import { hits, outer } from '../domain/geometry'
 import { formatCm } from '../domain/format'
@@ -19,6 +21,7 @@ const props = defineProps<{
 const emit = defineEmits<{ grab: [event: PointerEvent, mode: DragMode] }>()
 
 const project = useProject()
+const { m } = storeToRefs(useLocale())
 const ui = useUi()
 const { remove } = useStickerActions()
 
@@ -49,8 +52,9 @@ const boxStyle = computed(() => {
   }
 })
 const accessibleName = computed(() => {
-  const base = `${props.sticker.name}，寬 ${formatCm(props.sticker.w)} 公分`
-  return hasProblem.value ? `${base}，蓋到${problems.value.join('、')}` : base
+  const t = m.value
+  const base = t.sticker.accessibleName(props.sticker.name, formatCm(props.sticker.w))
+  return hasProblem.value ? base + t.sticker.accessibleCovers(t.list(problems.value.map(z => t.door.zones[z]))) : base
 })
 
 const ARROWS: Record<string, [number, number]> = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }
@@ -91,12 +95,12 @@ function onKey(e: KeyboardEvent) {
     <template v-if="isSelected">
       <span
         class="handle -right-[13px] -bottom-[13px] cursor-nwse-resize"
-        title="拖曳縮放"
+        :title="m.sticker.resize"
         @pointerdown="emit('grab', $event, 'resize')"
       ><MoveDiagonal2 :size="11" /></span>
       <span
         class="handle -top-[38px] left-1/2 -ml-[10px] cursor-grab"
-        title="拖曳旋轉"
+        :title="m.sticker.rotate"
         @pointerdown="emit('grab', $event, 'rotate')"
       ><RotateCw :size="11" /></span>
       <span class="pointer-events-none absolute -top-[18px] left-1/2 h-[18px] w-0.5 -translate-x-1/2 bg-select" />

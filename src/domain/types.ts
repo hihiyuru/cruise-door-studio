@@ -25,9 +25,13 @@ export interface Sticker {
   sample?: boolean
 }
 
+export type KeepOutId = 'roomNumber' | 'peephole' | 'lock'
+/** Where a sticker is in the way: a no-stick zone, or off the door. */
+export type Zone = KeepOutId | 'outside'
+
 export type KeepOut =
-  | { name: string; type: 'circle'; cx: number; cy: number; r: number }
-  | { name: string; type: 'rect'; x: number; y: number; w: number; h: number }
+  | { id: KeepOutId; type: 'circle'; cx: number; cy: number; r: number }
+  | { id: KeepOutId; type: 'rect'; x: number; y: number; w: number; h: number }
 
 export interface Rect { x: number; y: number; w: number; h: number }
 
