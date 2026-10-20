@@ -113,7 +113,7 @@ section.part { background: var(--surface); border: 1px solid var(--line); border
   <div class="decide">
     <h2>要決定什麼</h2>
     <ol id="decide"></ol>
-    <p class="settled"><b>已定案：</b>範例貼紙的圖片遺失時直接重畫、不提示；放不下的貼紙不印，列在警告裡給「縮小」或「切塊」；ibon 用 RGB，不轉 CMYK；開啟專案檔可以用復原回到原本的排版；失敗提示是紅色、不會自己消失；存檔問題用頂端橫幅；PDF 拆檔時列出按鈕逐一下載；兩個分頁互相覆蓋時暫停儲存並提醒；文案照 CLAUDE.md 的 6 條規則；去背有修改時點外面不會關；貼紙超出門外又比紙大時，兩則提醒都顯示。</p>
+    <p class="settled"><b>已定案：</b>範例貼紙的圖片遺失時直接重畫、不提示；放不下的貼紙不印，列在警告裡給「縮小」或「切塊」；ibon 用 RGB，不轉 CMYK；開啟專案檔可以用復原回到原本的排版；失敗提示是紅色、不會自己消失；存檔問題用頂端橫幅；PDF 拆檔時列出按鈕逐一下載；兩個分頁互相覆蓋時暫停儲存並提醒；文案照 CLAUDE.md 的 6 條規則；去背有修改時點外面不會關；貼紙超出門外又比紙大時，兩則提醒都顯示；介面語言依瀏覽器判斷（繁中／简中／English，其他語言用 English），標題旁的選單可以換並記住，下方說明維持繁中。</p>
   </div>
 
   <div id="parts"></div>
@@ -121,7 +121,7 @@ section.part { background: var(--surface); border: 1px solid var(--line); border
 
 <script>
 // ---------- screen thumbnails ----------
-const topBar = (o = {}) => `<div class="top"><b>郵輪艙門裝飾工作台</b><span class="savetxt ${o.saveErr ? 'err' : ''}">${o.save ?? '已自動儲存 20:29'}</span><span>專案▾</span>${o.print === false ? '' : `<span class="pbtn ${o.hiPrint ? 'hi' : ''}">列印／下載 PDF${o.sheets ? `（${o.sheets} 張）` : ''}</span>`}${o.back ? '' : ''}</div>`
+const topBar = (o = {}) => `<div class="top"><b>${o.title ?? '郵輪艙門裝飾工作台'} <span style="font-weight:400">文A ${o.lang ?? '繁體中文'}▾</span></b><span class="savetxt ${o.saveErr ? 'err' : ''}">${o.save ?? '已自動儲存 20:29'}</span><span>專案▾</span>${o.print === false ? '' : `<span class="pbtn ${o.hiPrint ? 'hi' : ''}">列印／下載 PDF${o.sheets ? `（${o.sheets} 張）` : ''}</span>`}${o.back ? '' : ''}</div>`
 const stk = (x, y, cls = '') => `<i class="stk ${cls}" style="left:${x}px;top:${y}px"></i>`
 function arrange(o = {}) {
   const stickers = (o.stickers ?? [[8, 40], [28, 70], [15, 95]]).map(s => stk(...s)).join('')
@@ -235,6 +235,12 @@ const parts = [
       ['在頂端列改列印規格', ['F4', 'ok', arrange({ extra: '<div class="menu" style="right:6px;width:90px"><div class="hl">7-11 ibon｜印刷店｜家用</div><div>紙張 A1 ▾</div></div>' }), '右欄、印刷頁同步改變']],
       ['備份裡有解不開的圖', ['F5', 'err', arrange({ toast: '△ 已開啟備份，但找不到 1 張圖，已從門上移除。 ✕' }), '其他貼紙照常開啟']],
       ['來路不明的備份檔', ['F6', 'ghost', arrange(), '藏在檔案裡的程式不會執行，也不會連到外部網址']],
+    ] },
+    { g: '瀏覽器的語言' },
+    { fork: [
+      ['英文（或沒有的語言，例如日文）', ['F7', 'ok', arrange({ title: 'Cruise Door Studio', lang: 'English', save: 'Saved 20:29', print: false }), '介面用 English；下方的說明、網頁標題維持繁中（給搜尋引擎）']],
+      ['從標題旁的選單換語言', ['F8', 'ok', arrange({ lang: '繁體中文', extra: '<div class="menu" style="left:60px;right:auto;width:60px"><div class="hl">繁體中文</div><div>简体中文</div><div>English</div></div>' }), '馬上換，排版不變；重新整理後記住選的語言']],
+      ['簡體中文', ['F9', 'ok', arrange({ title: '邮轮舱门装饰工作台', lang: '简体中文', save: '已自动保存 20:29' }), '已存的貼紙名稱（包括範例）不跟著換語言']],
     ] },
   ] },
 ]

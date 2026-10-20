@@ -13,6 +13,8 @@ export default defineConfig({
   use: {
     baseURL: 'http://localhost:4173/cruise-door-studio/',
     viewport: { width: 1366, height: 900 },
+    // the interface follows the browser's language; scenarios are written against the Traditional Chinese copy
+    locale: 'zh-TW',
     trace: 'retain-on-failure',
     ...(process.env.CI ? {} : { channel: 'chrome' }),
   },

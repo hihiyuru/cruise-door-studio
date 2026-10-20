@@ -238,7 +238,7 @@ export const zhHant = {
     previewRegion: '每一張的預覽',
     /** Split around the bold numbers. */
     totalBefore: '共',
-    totalSheets: (paper: string) => `張 ${paper}`,
+    totalSheets: (paper: string, _n: number) => `張 ${paper}`,
     costBefore: '，約',
     costAfter: '元',
     empty: '門上還沒有貼紙。',

@@ -124,7 +124,7 @@ async function downloadDoor() {
           v-if="sheets.length"
           class="text-[15px]"
         >
-          {{ m.print.totalBefore }} <b class="num">{{ sheets.length }}</b> {{ m.print.totalSheets(paperLabel) }}<template v-if="cost">
+          {{ m.print.totalBefore }} <b class="num">{{ sheets.length }}</b> {{ m.print.totalSheets(paperLabel, sheets.length) }}<template v-if="cost">
             {{ m.print.costBefore }} <b class="num">{{ cost }}</b> {{ m.print.costAfter }}
           </template>
         </p>
