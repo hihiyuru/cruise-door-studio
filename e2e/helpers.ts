@@ -11,10 +11,13 @@ export const toolbar = (page: Page) => page.getByRole('toolbar', { name: '貼紙
 export const info = (page: Page) => page.getByRole('status')
 export const failure = (page: Page) => page.getByRole('alert')
 
-/** Open the app with the three example stickers on the door. */
+/**
+ * Open the app with the three example stickers on the door. A first visit draws the examples and encodes them
+ * as PNG, which can take several seconds on a busy CI runner running several tests at once.
+ */
 export async function openApp(page: Page) {
   await page.goto('./')
-  await expect(stickers(page)).toHaveCount(3)
+  await expect(stickers(page)).toHaveCount(3, { timeout: 20_000 })
 }
 
 export async function addPictures(page: Page, ...names: string[]) {

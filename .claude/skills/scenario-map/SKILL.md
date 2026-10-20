@@ -62,7 +62,7 @@ description: 動手做新功能前，先盤點所有情境（edge case），畫�
 
 ### 動手前先打開參考成品
 
-- 發布版：https://claude.ai/artifact/XyVUSGQCJ6p2YrtFWcgbdg
+- 發布版：https://claude.ai/artifact/R5wE3bHq4xG6rHvQMBiAqq
 - 原始檔：`docs/scenario-map.html`
 
 **直接改原始檔，不要重寫一套。** 版型和縮圖都在裡面：
