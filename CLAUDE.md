@@ -4,7 +4,7 @@
 
 ## 回應慣例
 
-- 一律用繁體中文回覆；程式識別字用英文，UI 文案、註解、commit message 用繁體中文
+- 一律用繁體中文回覆；程式識別字用英文，註解、commit message 用繁體中文；UI 文案放在 `src/i18n/locales/`（見「文案」）
 - 先講結論，再講原因；問題直接問完，不要寫成預告句就結束
 - 解釋行為時用具體情境開頭（「使用者一次拖進 16 張 SVG，第 3 張是 HEIC…」），再用一句話帶到 `檔案:行`
 
@@ -41,8 +41,9 @@ src/
   render/      canvas 繪圖：canvas（共用工具）、sticker（白邊與裁切線）、floodFill（去背）、doorSvg、display（畫面用的小圖快取）、samples（範例貼紙）
   export/      pdf（350 dpi、比例尺、ibon 拆檔）、doorPng、download
   storage/     idb（IndexedDB 存檔）、projectFile（專案檔匯出入）
-  stores/      project（排版狀態、undo/redo、存檔）、assets（圖片快取，不進 undo）、ui（選取、步驟、toast）
-  composables/ useLayout（共用的排版結果）、useFiles（加入圖片）
+  stores/      project（排版狀態、undo/redo、存檔）、assets（圖片快取，不進 undo）、ui（選取、步驟、toast）、locale（介面語言與文字 `m`）
+  composables/ useLayout（共用的排版結果）、useFiles（加入圖片）、usePrintSettings（列印地點、紙張名稱）
+  i18n/        畫面文字：locales/zhHant（來源）、zhHans、en；detect（依瀏覽器語言判斷）
   components/  介面；AppTopBar、ArrangeStep（LayerList / DoorStage / DoorSettings / InspectorPanel）、PrintStep、BgEditorModal
 docs/
   scenario-map.html  情境全圖原始檔（見 scenario-map skill）
@@ -79,13 +80,22 @@ docs/
 依 [Microsoft 繁體中文風格指南](https://download.microsoft.com/download/2/9/3/293e6d41-ba40-451b-a41e-94bdb6242ae3/zho-twn-StyleGuide.pdf)（2.1、5.6.2 節）與 NN/g 等錯誤訊息原則整理：
 
 1. **一則提示最多兩句**：第一句說發生什麼，第二句說怎麼辦。成功只要一句
-2. **不用術語**：dpi、容許度、解析度、向量、ibon-A3 這類內部名稱不出現在畫面上（紙張名稱用 `paperName()`，`paperShortName()` 只給檔名用）
+2. **不用術語**：dpi、容許度、解析度、向量、ibon-A3 這類內部名稱不出現在畫面上（紙張名稱用 `usePrintSettings().paperName`，`m.paper.fileName` 只給檔名用）
 3. **固定句型**：失敗用「無法…」「找不到…」「記憶體不足，無法…」，成功用「已…」，建議用「建議…」。同一件事只用一種說法（例：「去背」「列印／下載 PDF」「下載備份」「開啟備份」）
 4. **省略主詞**：不寫「你」「您」，也不寫「請」
 5. **知道下一步才寫**，不硬湊；不怪使用者
 6. 完整的句子結尾加句號；按鈕、標籤不加
 
 範例：「無法開啟 IMG_2041.HEIC，改用 JPG 或 PNG。」「圖太小，印出來會糊。」「已刪除「米奇」。［復原］」
+
+#### 多語系
+
+- 畫面上的字**不要寫死在元件裡**，一律放 `src/i18n/locales/`：`zhHant.ts` 是來源，`zhHans.ts`、`en.ts` 的型別跟著它，**新增或改一句就三個檔案一起改**（少了 `npm run typecheck` 會擋）。元件用 `const { m } = storeToRefs(useLocale())`
+- 需要數字或名稱的寫成函式（`added: (n) => …`），英文的單複數在函式裡處理；句子中間夾 `<b>`、`<a>` 的拆成前後兩段
+- `domain/`、`render/` 不放畫面文字，用 id（門款、禁貼區、範例貼紙），由元件翻譯
+- 简中：用中國大陸常用詞（打印、文件、撤销、内存、标签页），規則同上面 6 條
+- 英文：sentence case、不寫 please；失敗用 Can't…，成功用過去式短句（Added 3 pictures.），建議用 Try…
+- `index.html` 的說明、`<title>`、meta 是給搜尋引擎的，維持繁中，不跟著介面語言換
 
 ### 失敗處理
 

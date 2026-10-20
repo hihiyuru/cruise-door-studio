@@ -9,6 +9,7 @@ import { useUndoToast } from '../composables/useUndoToast'
 import { importProject, ProjectFileError } from '../storage/projectFile'
 import { useBackup } from '../composables/useBackup'
 import PrintSpecPicker from './PrintSpecPicker.vue'
+import LocalePicker from './LocalePicker.vue'
 
 const project = useProject()
 const ui = useUi()
@@ -84,9 +85,12 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
         aria-hidden="true"
       />{{ m.topBar.back }}
     </button>
-    <h1 class="mr-auto text-[17px] font-bold">
-      {{ m.app.title }}
-    </h1>
+    <div class="mr-auto flex items-center gap-1">
+      <h1 class="text-[17px] font-bold">
+        {{ m.app.title }}
+      </h1>
+      <LocalePicker />
+    </div>
 
     <span
       class="text-[12.5px]"

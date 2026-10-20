@@ -1,0 +1,266 @@
+import type { Paper } from '../../domain/papers'
+import { standardPaperName } from '../../domain/papers'
+import type { PrintPlace } from '../../domain/types'
+import type { Messages } from './zhHant'
+
+/** Simplified Chinese, in the words used in mainland China (打印、文件、撤销). Same copy rules as Traditional. */
+export const zhHans: Messages = {
+  timeTag: 'zh-CN',
+  list: (items: string[]) => items.join('、'),
+
+  app: {
+    title: '邮轮舱门装饰工作台',
+    loading: '正在读取上次的排版…',
+    footer: '非迪士尼官方工具・图片只保存在这台电脑的浏览器里，不会上传・舱门是金属门，装饰要用磁铁固定',
+    nothingToRedo: '没有可以重做的步骤了。',
+    nothingToUndo: '没有可以撤销的步骤了。',
+    lostPictures: (n: number) => `找不到 ${n} 张图，已从门上移除。`,
+  },
+
+  topBar: {
+    back: '回到门上',
+    saving: '保存中…',
+    saveFailed: '无法自动保存',
+    savePaused: '暂停保存',
+    saved: '已自动保存',
+    savedAt: (time: string) => `已自动保存 ${time}`,
+    undo: '撤销',
+    undoTitle: '撤销（⌘Z）',
+    redo: '重做',
+    redoTitle: '重做（⇧⌘Z）',
+    backup: '备份',
+    downloadBackup: '下载备份',
+    downloadBackupHint: '排版和图片存成一个文件，换电脑也能接着做',
+    openBackup: '打开备份',
+    openBackupHint: '会替换当前的排版，可以撤销',
+    print: '打印／下载 PDF',
+    sheetCount: (n: number) => `（${n} 张）`,
+  },
+
+  backup: {
+    fileName: (stamp: string) => `舱门装饰项目-${stamp}.json`,
+    downloaded: '已下载备份。换电脑时用「打开备份」接着做。',
+    downloadFailed: '内存不足，无法下载备份。先删掉几张大图再试一次。',
+    opened: '已打开备份。',
+    openedWithLost: (n: number) => `已打开备份，但找不到 ${n} 张图，已从门上移除。`,
+    notBackup: '无法打开，这不是备份文件。',
+    openFailed: '无法打开，文件可能已损坏。',
+  },
+
+  saveBanner: {
+    failed: '无法自动保存，关闭前先备份。',
+    conflict: '另一个标签页改过排版，这里的修改暂停保存。',
+    reload: '加载最新',
+    keepThisTab: '保留这里的版本',
+  },
+
+  toast: {
+    undo: '撤销',
+    close: '关闭',
+  },
+
+  samples: {
+    badge: '示例：圆章',
+    star: '示例：星星',
+    flag: '示例：旗子',
+  },
+
+  stickers: {
+    region: '贴纸列表',
+    add: '添加图片',
+    addHint: 'PNG、JPG、SVG。也可以拖进来或粘贴。',
+    title: '贴纸',
+    clearSamples: '清除示例',
+    samplesCleared: '已清除示例。',
+    empty: '门上还没有贴纸。',
+    restoreSamples: '放回示例贴纸',
+    width: (cm: string) => `宽 ${cm} cm`,
+    covers: (zones: string) => `盖到${zones}`,
+    clearAll: '清空全部贴纸',
+    confirmClearAll: (n: number) => `再按一次，删除全部 ${n} 张`,
+    cleared: (n: number) => `已清空 ${n} 张。`,
+    pastedName: '粘贴的图片',
+    added: (n: number) => (n > 1 ? `已添加 ${n} 张。` : '已添加。'),
+    cannotOpen: (names: string) => `无法打开 ${names}，改用 JPG 或 PNG。`,
+    deleted: (name: string) => `已删除「${name}」。`,
+  },
+
+  door: {
+    region: '门的设置',
+    stage: '舱门',
+    title: '门',
+    model: '门款',
+    names: {
+      'disney-adventure': '迪士尼邮轮・探险号（Disney Adventure）',
+      custom: '自定义尺寸',
+    },
+    customOption: '自定义尺寸…',
+    notes: {
+      'disney-adventure': '约略尺寸，出发前建议自己量一次。门牌直径 20.5 cm、门牌上缘距门顶约 15.5 cm、猫眼在门牌下 20 cm、门锁区距门顶 79 cm。',
+      custom: '自定义尺寸的门不会画出门牌、门锁，也没有禁贴区。',
+    },
+    widthMm: '宽（mm）',
+    heightMm: '高（mm）',
+    roomNo: '门牌号码（只影响预览）',
+    showKeepOut: '标出不能贴的区域',
+    grid: '10 厘米网格',
+    basis: '尺寸依据',
+    size: (w: number, h: number) => `${w} × ${h} cm。`,
+    hint: '点贴纸就能调整大小、去背景和白边。',
+    zones: {
+      roomNumber: '门牌',
+      peephole: '猫眼',
+      lock: '门锁和门把手',
+      outside: '门外',
+    },
+    zonesShort: {
+      roomNumber: '门牌',
+      peephole: '猫眼',
+      lock: '门把手',
+      outside: '门外',
+    },
+  },
+
+  sticker: {
+    accessibleName: (name: string, cm: string) => `${name}，宽 ${cm} 厘米`,
+    accessibleCovers: (zones: string) => `，盖到${zones}`,
+    resize: '拖动缩放',
+    rotate: '拖动旋转',
+  },
+
+  toolbar: {
+    region: '贴纸工具',
+    removeBackground: '去背景',
+    duplicate: '复制',
+    duplicateTitle: '复制一张',
+    delete: '删除',
+    deleteTitle: '删除（Delete 键）',
+  },
+
+  inspector: {
+    region: '贴纸设置',
+    name: '名称',
+    renameTitle: '点一下可以改名称',
+    deselect: '取消选择',
+    width: '宽度',
+    finished: (w: string, h: string) => `成品 ${w} × ${h}`,
+    rotation: '旋转',
+    straighten: '摆正',
+    border: '白边',
+    cutLine: '外围加灰色裁切线',
+    inTheWay: (zone: string) => `挡到${zone}了，挪开一点。`,
+    offDoor: '超出门外了。',
+    blurry: '图太小，打印出来会糊。',
+    fitsOne: (paper: string) => `${paper} 一张印得下。`,
+    willSplit: (paper: string, n: number) => `${paper} 印不下，会分成 ${n} 张打印。`,
+    doesNotFit: (paper: string) => `${paper} 印不下。`,
+    changePrintTitle: '换打印地点或纸张',
+    shrinkTo: (cm: string) => `缩到 ${cm} cm`,
+    tile: '分成几张打印，自己拼',
+    tooSmallToSplit: '纸张太小，无法分张打印。',
+    removeBackground: '去背景',
+    replace: '换图',
+    replaced: '已换图。',
+    duplicate: '复制',
+    mirror: '左右对称复制',
+    mirrorTitle: '在门的另一侧对称位置复制一张',
+    toTop: '移到最上层',
+    toBottom: '移到最下层',
+    delete: '删除',
+  },
+
+  editor: {
+    canvas: '点一下要去掉的背景颜色',
+    title: '去背景',
+    hint: '点背景，同色的部分会一起去掉。',
+    auto: '自动去背景',
+    range: '去除范围',
+    global: '不相连的同色也去掉',
+    shave: '修白边',
+    undo: '上一步',
+    reset: '回到原图',
+    busyPhotoBefore: '背景很杂的照片，建议先用',
+    busyPhotoAfter: '去背景。',
+    cancel: '取消',
+    apply: '应用',
+    nothingHere: '这里没有背景了。',
+    alreadyClean: '背景已经去干净了。',
+    nothingToUndo: '没有上一步了。',
+    notApplied: '还没应用。按「应用」保留，按「取消」放弃。',
+    allRemoved: '整张都被去掉了，按「上一步」。',
+    applied: '已去背景。',
+    applyFailed: '内存不足，无法应用去背景。',
+  },
+
+  places: {
+    ibon: { label: '7-11 ibon', hint: '普通纸，A3 彩色一张约 20 新台币。' },
+    shop: { label: '打印店', hint: '可以选相纸和大尺寸。' },
+    home: { label: '家用打印机', hint: '以 A4 为主。' },
+  } satisfies Record<PrintPlace, { label: string; hint: string }>,
+
+  paper: {
+    name: (p: Paper) => (p.id === 'custom' ? `${p.w} × ${p.h} mm` : p.id === 'a3plus' ? 'A3 加大' : standardPaperName(p)),
+    option: (p: Paper, place: PrintPlace) => {
+      if (p.id === 'custom') return `自定义（${p.w} × ${p.h} mm）`
+      const name = p.id === 'a3plus' ? 'A3 加大' : standardPaperName(p)
+      return place === 'ibon' ? name : `${name}（${p.w / 10} × ${p.h / 10} cm）`
+    },
+    fileName: (p: Paper, place: PrintPlace) => {
+      if (p.id === 'custom') return `${p.w}x${p.h}mm`
+      const base = p.id === 'a3plus' ? 'A3加大' : standardPaperName(p).toUpperCase()
+      return place === 'ibon' ? `ibon-${base}` : base
+    },
+    customOption: '自定义尺寸…',
+  },
+
+  printSettings: {
+    where: '在哪里打印',
+    paper: '纸张',
+    widthMm: '宽（mm）',
+    heightMm: '高（mm）',
+    pickerTitle: '打印地点与纸张',
+    printAt: '打印到',
+    summary: (place: string, paper: string) => `${place}・${paper}`,
+  },
+
+  print: {
+    region: '打印设置',
+    previewRegion: '每一张的预览',
+    totalBefore: '共',
+    totalSheets: (paper: string, _n: number) => `张 ${paper}`,
+    costBefore: '，约',
+    costAfter: '新台币',
+    empty: '门上还没有贴纸。',
+    download: '下载 PDF',
+    preparing: '准备中…',
+    progress: (done: number, total: number) => `生成中 ${done} / ${total} 张…`,
+    fileBase: (paper: string, n: number) => `舱门贴纸_${paper}_${n}张`,
+    partFile: (base: string, from: number, to: number) => `${base}_第${from}-${to}张.pdf`,
+    partLabel: (from: number, to: number) => `第 ${from}–${to} 张`,
+    downloaded: '已下载 PDF。',
+    splitFiles: (n: number) => `文件较大，已分成 ${n} 个 PDF。`,
+    missingArtwork: (name: string) => `找不到「${name}」的图，无法生成 PDF。换图或删掉这张再试一次。`,
+    outOfMemory: '内存不足，无法生成 PDF。先缩小最大的几张。',
+    partsHint: '每个都要下载，到 ibon 也要每个都上传。',
+    partDone: '已下载',
+    ibonTip: '先打印一张，确认比例尺是 5 厘米。',
+    shopTip: '按实际大小打印。需要 CMYK 的话，交给店家转。',
+    homeTip: '打印时选「实际大小」，不要选「适合页面」。',
+    tiled: (name: string, n: number, label: string) => `「${name}」分成 ${n} 张打印（${label}-1～${label}-${n}），拼的时候叠 1 厘米对齐。`,
+    tooBig: (paper: string) => `这几张 ${paper} 印不下：`,
+    shrinkTo: (cm: string) => `缩到 ${cm} cm`,
+    split: '分成几张打印',
+    shrunk: (cm: string) => `已缩到 ${cm} cm。`,
+    splitDone: (n: number) => `已分成 ${n} 张打印。`,
+    tooSmallToSplit: '纸张太小，无法分张打印。',
+    blurry: (names: string) => `「${names}」图太小，打印出来会糊。`,
+    marginsTitle: '纸张边距与间距',
+    marginMm: '边距（mm）',
+    gapMm: '间距（mm）',
+    downloadDoor: '下载整扇门的预览图',
+    doorFile: '舱门预览.png',
+    doorFailed: '无法生成预览图。',
+    noSheets: '回到门上添加图片后，这里会显示排好的纸张。',
+    sheetLabel: (n: number) => `第 ${n} 张`,
+  },
+}
